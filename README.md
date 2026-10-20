@@ -1,13 +1,15 @@
 # AndroidSimpleTV
 
-A quiet, native Kotlin Android TV launcher: fullscreen bundled landscapes, a clock and date, and a remote-controlled app dock. Initial offline MVP, licensed under MIT.
+A quiet, native Kotlin Android TV launcher: fullscreen bundled landscapes, a clock and date, and a remote-controlled app dock. Native TV MVP, licensed under MIT.
 
 ## What works
 
-- Three original bundled vector landscapes (alpine lake, dunes, coast), scaled to fill the screen without letterboxing. No network or storage permissions.
+- Three original bundled vector landscapes (alpine lake, dunes, coast), scaled to fill the screen without letterboxing. Wallpapers remain offline. Optional weather uses internet access; no storage or device-location permissions.
 - Each wallpaper is static for **55 seconds**, followed by a **5-second crossfade**. No pan/zoom or continuous redraw during the static interval.
 - Slideshow and clock callbacks stop in `onPause`. Returning resumes the same wallpaper/fade position; background time is excluded. Activity recreation also restores progress and dock selection.
 - Clock honors the device's locale and 12/24-hour preference; date uses the locale's ordering.
+- Saved dock customization: show/hide apps, move earlier/later, or reset order A–Z. Settings always remains accessible, even with all apps hidden.
+- Optional city/postal-code weather search, confirmed location selection, Fahrenheit by default with a Celsius toggle. Current temperature refreshes every 30 minutes while foregrounded. Cached readings are marked when stale, and unavailable weather does not block the launcher.
 - A horizontally scrolling dock discovers TV-launchable activities, with icons, labels, visible focus, and remembered selection. It refreshes when the launcher resumes. Phone-only apps are intentionally excluded.
 - Separate `LEANBACK_LAUNCHER` and `HOME`/`DEFAULT` intent filters, a TV banner/icon, landscape display, and no touchscreen requirement.
 
@@ -15,14 +17,27 @@ A quiet, native Kotlin Android TV launcher: fullscreen bundled landscapes, a clo
 
 | Context | Button | Result |
 | --- | --- | --- |
-| Wallpaper | Down, Up, OK/Enter, or Menu | Reveal dock; first press never launches an app |
+| Wallpaper | Down, Up, or OK/Enter | Reveal dock; first press never launches an app |
 | Dock | Left / Right | Move focus and scroll through apps |
 | Dock | OK/Enter | Launch focused app |
-| Dock | Up, Back, or Menu | Hide dock |
+| Dock | Up or Back | Hide dock |
 | Wallpaper | Back | Normal Android back behavior (exit when opened as a regular app) |
+| Anywhere in launcher | Menu | Open Settings (also available as the final dock tile) |
 | Anywhere | Home | Android's configured home launcher |
 
 The dock stays visible until hidden or another app opens. Home behavior is controlled by the TV, not intercepted by this app.
+
+## Customize the dock and weather
+
+Open the permanent **Settings** dock tile, or press Menu in the launcher. Under **Manage dock apps**, choose an app, then Show/Hide or Move earlier/later. The manager includes hidden apps so they can be restored. Moves apply to that complete list. **Sort apps A–Z** resets ordering but preserves visibility choices. New apps append alphabetically after the saved order. Nothing is uninstalled or disabled.
+
+Select **Weather location**, enter a city or postal code, then confirm a matching result. A new install has no preset location and sends no weather request until configured. Search text and selected city coordinates go to Open-Meteo; no GPS/device location permission is requested. Postal codes may resolve to city-level coordinates. **Temperature** toggles °F/°C; **Turn weather off** removes the saved location and cached reading. Preferences stay on this device and survive app updates.
+
+Weather uses the [Open-Meteo API](https://open-meteo.com/en/docs) and [geocoding API](https://open-meteo.com/en/docs/geocoding-api), with Open-Meteo/GeoNames attribution in Settings. The public endpoint is intended for non-commercial use; review [provider terms](https://open-meteo.com/en/terms) before commercial distribution. Weather data is CC BY 4.0. Internet failures leave wallpapers and app launching functional. Foreground polling stops on pause; requests are cancelled and late results ignored.
+
+## Idle screensaver versus Home
+
+Selecting this app as the default Home launcher would not select it as the TV's screensaver. Android runs screensavers as a separate [DreamService](https://developer.android.com/reference/android/service/dreams/DreamService); [Google TV Ambient mode](https://support.google.com/googletv/answer/10070821?hl=en) has its own settings. This version does not implement a screensaver, change Sony Ambient mode, prevent idle sleep, or change the default launcher. A shared-wallpaper screensaver is future work, subject to the TV firmware allowing selection. True standby keeps the screen off.
 
 ## Build
 
@@ -72,8 +87,8 @@ Never run launcher-disable, system-package-uninstall, or `set-home-activity` com
 
 ## Scope and contributions
 
-This MVP has no Reddit feeds, downloads, wallpaper picker, favorites/reordering, weather, settings screen, background service, analytics, or boot receiver. Those can be added in focused follow-up PRs. Launching other apps relies on their exported TV activities; unavailable apps fail with a message rather than crashing the launcher.
+This MVP has no Reddit feeds, downloads, wallpaper picker, favorites groups, custom screensaver, background service, analytics, or boot receiver. Those can be added in focused follow-up PRs. Launching other apps relies on their exported TV activities; unavailable apps fail with a message rather than crashing the launcher.
 
-`MainActivity.kt` owns the native view hierarchy, package discovery, remote focus and foreground lifecycle. `SlideshowTimeline.kt` is a pure Kotlin timing model with boundary tests. Robolectric tests exercise actual activity lifecycle and remote key gestures. All three landscapes and the banner artwork were authored for this project; banner lettering uses DejaVu Sans (see [font notice](docs/FONT-NOTICE.txt)).
+`SettingsActivity.kt` provides TV settings, `LauncherPreferences.kt` persists dock/weather choices, and `WeatherClient.kt` handles bounded HTTPS requests. `MainActivity.kt` owns the native view hierarchy, package discovery, remote focus and foreground lifecycle. `SlideshowTimeline.kt` is a pure Kotlin timing model with boundary tests. Robolectric tests exercise actual activity lifecycle and remote key gestures. All three landscapes and the banner artwork were authored for this project; banner lettering uses DejaVu Sans (see [font notice](docs/FONT-NOTICE.txt)).
 
 Manifest setup follows the [Android TV app guide](https://developer.android.com/training/tv/get-started/create). Tool versions follow the [AGP 8.9 compatibility table](https://developer.android.com/build/releases/agp-8-9-0-release-notes).

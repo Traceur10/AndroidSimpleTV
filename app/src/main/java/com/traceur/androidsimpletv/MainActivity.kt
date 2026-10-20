@@ -2,7 +2,6 @@ package com.traceur.androidsimpletv
 
 import android.app.Activity
 import android.content.ActivityNotFoundException
-import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
@@ -29,6 +28,13 @@ import java.util.concurrent.Executors
 class MainActivity : Activity() {
     private val wallpapers = intArrayOf(R.drawable.wallpaper_alpine, R.drawable.wallpaper_dunes, R.drawable.wallpaper_coast)
     internal lateinit var timeline: SlideshowTimeline
+    private lateinit var preferences: LauncherPreferences
+    private lateinit var weatherView: TextView
+    private val weatherExecutor = Executors.newSingleThreadExecutor()
+    private val weatherClient = WeatherClient()
+    private var weatherJob: java.util.concurrent.Future<*>? = null
+    private var weatherGeneration = 0
+    private val weatherTick = Runnable { refreshWeather() }
     private val handler = Handler(Looper.getMainLooper())
     private val appLoader = Executors.newSingleThreadExecutor()
     private var loadGeneration = 0
@@ -66,6 +72,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        preferences = LauncherPreferences(this)
         timeline = SlideshowTimeline(wallpapers.size, savedInstanceState?.getLong("elapsed") ?: 0L)
         selectedComponent = savedInstanceState?.getString("selected")
         createLayout()
@@ -94,12 +101,17 @@ class MainActivity : Activity() {
         slideshowTick.run()
         clockTick.run()
         loadApps()
+        refreshWeather()
     }
 
     override fun onPause() {
         advanceTimeline()
         resumed = false
         consumedKey = null
+        weatherGeneration++
+        weatherJob?.cancel(true)
+        weatherClient.cancel()
+        handler.removeCallbacks(weatherTick)
         handler.removeCallbacks(slideshowTick)
         handler.removeCallbacks(clockTick)
         // Ignore pending package-query results after leaving the foreground.
@@ -110,6 +122,7 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         appLoader.shutdownNow()
+        weatherExecutor.shutdownNow()
         super.onDestroy()
     }
 
@@ -159,6 +172,10 @@ class MainActivity : Activity() {
         root.addView(clockGroup, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.START).apply {
             setMargins(dp(48), dp(34), dp(48), 0)
         })
+        weatherView = label("", 17f).apply { gravity = Gravity.END }
+        root.addView(weatherView, FrameLayout.LayoutParams(dp(330), -2, Gravity.TOP or Gravity.END).apply {
+            setMargins(dp(48), dp(48), dp(48), 0)
+        })
         hint = label(getString(R.string.dock_hint), 16f).apply { gravity = Gravity.CENTER }
         root.addView(hint, FrameLayout.LayoutParams(-1, dp(48), Gravity.BOTTOM).apply { bottomMargin = dp(24) })
         dock = LinearLayout(this).apply {
@@ -195,12 +212,10 @@ class MainActivity : Activity() {
     private fun loadApps() {
         val generation = ++loadGeneration
         appLoader.execute {
-            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
-            val apps = packageManager.queryIntentActivities(intent, 0)
-                .filter { it.activityInfo.packageName != packageName && it.activityInfo.exported }
-                .distinctBy { ComponentName(it.activityInfo.packageName, it.activityInfo.name) }
-                .map { AppEntry(ComponentName(it.activityInfo.packageName, it.activityInfo.name), it.loadLabel(packageManager).toString(), it.loadIcon(packageManager)) }
-                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.label })
+            val discovered = loadTvApps(this)
+            val byId = discovered.associateBy { it.component.flattenToString() }
+            val apps = preferences.ordered(discovered.map { it.component.flattenToString() })
+                .filterNot { preferences.isHidden(it) }.mapNotNull { byId[it] }
             handler.post {
                 if (resumed && generation == loadGeneration && !isDestroyed) populateApps(apps)
             }
@@ -209,7 +224,6 @@ class MainActivity : Activity() {
 
     private fun populateApps(apps: List<AppEntry>) {
         appRow.removeAllViews()
-        if (apps.isEmpty()) appRow.addView(label(getString(R.string.empty_apps), 18f))
         apps.forEach { app ->
             val card = LinearLayout(this).apply {
                 tag = app.component.flattenToString()
@@ -246,6 +260,21 @@ class MainActivity : Activity() {
             }, LinearLayout.LayoutParams(-1, dp(30)))
             appRow.addView(card, LinearLayout.LayoutParams(dp(136), dp(104)).apply { marginEnd = dp(12) })
         }
+        val settings = label(getString(R.string.settings_title), 18f).apply {
+            id = View.generateViewId()
+            tag = "settings"
+            gravity = Gravity.CENTER
+            isFocusable = true
+            isClickable = true
+            background = rounded(0xFF23364A.toInt(), 12f)
+            setOnFocusChangeListener { _, focused ->
+                background = rounded(if (focused) 0xFFB8E4DE.toInt() else 0xFF23364A.toInt(), 12f)
+                setTextColor(if (focused) 0xFF102332.toInt() else Color.WHITE)
+                if (focused) selectedComponent = "settings"
+            }
+            setOnClickListener { openSettings() }
+        }
+        appRow.addView(settings, LinearLayout.LayoutParams(dp(136), dp(104)))
         // Keep left/right navigation inside the row, including the end cards.
         for (index in 0 until appRow.childCount) {
             appRow.getChildAt(index).apply {
@@ -283,9 +312,14 @@ class MainActivity : Activity() {
             if (event.action == KeyEvent.ACTION_UP) consumedKey = null
             return true
         }
+        if (event.keyCode == KeyEvent.KEYCODE_MENU && event.action == KeyEvent.ACTION_DOWN) {
+            consumedKey = event.keyCode
+            openSettings()
+            return true
+        }
         val visible = dock.visibility == View.VISIBLE
-        val reveal = !visible && event.keyCode in intArrayOf(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_MENU)
-        val hide = visible && event.keyCode in intArrayOf(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_MENU)
+        val reveal = !visible && event.keyCode in intArrayOf(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER)
+        val hide = visible && event.keyCode in intArrayOf(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_BACK)
         if (event.action == KeyEvent.ACTION_DOWN && (reveal || hide)) {
             consumedKey = event.keyCode
             if (hide) hideDock() else showDock()
@@ -312,5 +346,40 @@ class MainActivity : Activity() {
         setColor(color)
         cornerRadius = radius * resources.displayMetrics.density
     }
-    private data class AppEntry(val component: ComponentName, val label: String, val icon: android.graphics.drawable.Drawable)
+    private fun openSettings() { startActivity(Intent(this, SettingsActivity::class.java)) }
+
+    private fun refreshWeather() {
+        if (!resumed) return
+        handler.removeCallbacks(weatherTick)
+        val location = preferences.location
+        if (location == null) { weatherView.setText(R.string.weather_setup); return }
+        val cached = preferences.weather
+        if (cached != null && cached.isFresh(System.currentTimeMillis())) {
+            displayWeather(location, cached)
+            handler.postDelayed(weatherTick, (cached.fetchedAt + 30 * 60_000L - System.currentTimeMillis()).coerceAtLeast(1_000L))
+            return
+        }
+        displayWeather(location, cached)
+        val token = ++weatherGeneration
+        weatherJob = weatherExecutor.submit {
+            val result = runCatching { weatherClient.current(location) }
+            handler.post {
+                if (!resumed || token != weatherGeneration) return@post
+                result.fold(onSuccess = {
+                    preferences.weather = it
+                    displayWeather(location, it)
+                }, onFailure = { displayWeather(location, cached, true) })
+                handler.postDelayed(weatherTick, 30 * 60_000L)
+            }
+        }
+    }
+
+    private fun displayWeather(location: WeatherLocation, reading: WeatherReading?, failed: Boolean = false) {
+        val temperature = reading?.let { "${it.temperature(preferences.fahrenheit)}${if (preferences.fahrenheit) "°F" else "°C"}" }
+            ?: getString(if (failed) R.string.weather_unavailable else R.string.weather_loading)
+        val stale = if (reading != null && !reading.isFresh(System.currentTimeMillis())) {
+            "\n" + getString(R.string.weather_cached, DateFormat.getDateFormat(this).format(Date(reading.fetchedAt)) + " " + DateFormat.getTimeFormat(this).format(Date(reading.fetchedAt)))
+        } else ""
+        weatherView.text = getString(R.string.weather_display, location.name, temperature, stale)
+    }
 }

@@ -1,4 +1,16 @@
-# MVP validation — 2026-10-20
+# Validation — 2026-10-20
+
+## v0.2: dock customization and weather
+
+- `testDebugUnitTest lintDebug assembleDebug`: BUILD SUCCESSFUL. **12 tests passed**, with **0 lint errors and 8 warnings** (the original seven plus fixed landscape orientation for Settings).
+- New tests cover hidden apps/custom ordering surviving a fresh preferences instance, alphabetical reset preserving visibility, missing/new apps, default Fahrenheit with no preset location, changing location clearing cached weather, temperature conversion, and 30-minute cache expiry/clock rollback.
+- Live geocoding and current-temperature endpoints responded successfully. The BRAVIA displayed the user-selected city and a live Fahrenheit reading, retained after the app process restarted. Location is stored only in app preferences, never as a repository default.
+- Settings uses standard Android dialogs and a permanent dock tile. The manager exposes hidden apps for recovery; ordering applies to the full list. Detailed hardware interaction results are recorded in the PR.
+- The final change adds INTERNET permission only. Weather is opt-in through explicit city selection; no GPS or other device-location permission. Requests have timeouts, cache stale labels, lifecycle cancellation, and foreground-only refresh. Offline/error presentation is implemented but has not been exercised by disconnecting the TV network.
+- No screensaver/default-home/system-package changes. Sony Ambient mode still owns the idle screensaver. Reddit images and a dedicated DreamService remain future work.
+
+## v0.1 baseline (historical)
+
 
 ## Build and automated checks
 
@@ -11,7 +23,7 @@
 
 The local sandbox uses workspace-local SDK, Android debug-key, Gradle and Robolectric caches. Robolectric's first attempt could not create a lock in the read-only user home; a local Gradle init script redirects its test-process home and Maven downloads to the workspace. No workaround is needed on a normally writable developer machine. Android's optional metrics initialization still warns about the read-only home; compilation, tests and packaging succeed.
 
-Lint: **0 errors, 7 warnings**. The warnings are: one API-33-only Back opt-out attribute (older TVs ignore it); three large vector wallpaper dimensions; one TV-specific fixed landscape orientation; one recommendation for Android 12 backup extraction rules; and one density-folder warning for the xhdpi TV banner. These are recorded rather than hidden by a broad lint suppression. The app currently stores no persistent user data. Physical 4K rendering performance and backup/transfer behavior have not been profiled.
+Lint: **0 errors, 7 warnings**. The warnings are: one API-33-only Back opt-out attribute (older TVs ignore it); three large vector wallpaper dimensions; one TV-specific fixed landscape orientation; one recommendation for Android 12 backup extraction rules; and one density-folder warning for the xhdpi TV banner. These are recorded rather than hidden by a broad lint suppression. Version 0.1 stored no persistent user data; v0.2 now stores dock/weather preferences and cached readings locally. Physical 4K rendering performance and backup/transfer behavior have not been profiled.
 
 ## BRAVIA hardware smoke test
 
