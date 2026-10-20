@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">AndroidSimpleTV</string>
+    <string name="dock_hint">Press ↓ or OK for apps</string>
+    <string name="dock_title">Your apps</string>
+    <string name="dock_controls">← →  Choose    OK  Open    ↑ / Back  Hide</string>
+    <string name="empty_apps">No TV apps found</string>
+    <string name="launch_failed">This app is no longer available</string>
+</resources>
