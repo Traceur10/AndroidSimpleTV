@@ -28,6 +28,14 @@ import java.util.concurrent.Executors
 
 class MainActivity : Activity() {
     private val wallpapers = intArrayOf(R.drawable.wallpaper_alpine, R.drawable.wallpaper_dunes, R.drawable.wallpaper_coast)
+    private val wallpaperExecutor = Executors.newSingleThreadExecutor()
+    private var wallpaperJob: java.util.concurrent.Future<*>? = null
+    private var wallpaperGeneration = 0
+    private var loadedAlbum: LoadedAlbum? = null
+    private var restoredAlbumKey: String? = null
+    private var restoredElapsed = 0L
+    private lateinit var photoCredit: TextView
+    private val wallpaperCheck = Runnable { loadWallpapers() }
     internal lateinit var timeline: SlideshowTimeline
     private lateinit var preferences: LauncherPreferences
     private lateinit var weatherView: TextView
@@ -75,6 +83,8 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         preferences = LauncherPreferences(this)
         timeline = SlideshowTimeline(wallpapers.size, savedInstanceState?.getLong("elapsed") ?: 0L)
+        restoredAlbumKey = savedInstanceState?.getString("album")
+        restoredElapsed = savedInstanceState?.getLong("elapsed") ?: 0L
         selectedComponent = savedInstanceState?.getString("selected")
         createLayout()
         renderWallpaper()
@@ -105,6 +115,7 @@ class MainActivity : Activity() {
         clockTick.run()
         loadApps()
         refreshWeather()
+        loadWallpapers()
     }
 
     override fun onPause() {
@@ -112,6 +123,9 @@ class MainActivity : Activity() {
         resumed = false
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         consumedKey = null
+        wallpaperGeneration++
+        wallpaperJob?.cancel(true)
+        handler.removeCallbacks(wallpaperCheck)
         weatherGeneration++
         weatherJob?.cancel(true)
         weatherClient.cancel()
@@ -127,12 +141,14 @@ class MainActivity : Activity() {
         handler.removeCallbacksAndMessages(null)
         appLoader.shutdownNow()
         weatherExecutor.shutdownNow()
+        wallpaperExecutor.shutdownNow()
         super.onDestroy()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         advanceTimeline()
         outState.putLong("elapsed", timeline.elapsedMs)
+        outState.putString("album", loadedAlbum?.album?.let { "${it.source}:${it.fetched}" })
         outState.putBoolean("dock", dock.visibility == View.VISIBLE)
         outState.putString("selected", selectedComponent)
         super.onSaveInstanceState(outState)
@@ -148,10 +164,55 @@ class MainActivity : Activity() {
     private fun renderWallpaper() {
         if (renderedIndex != timeline.imageIndex) {
             renderedIndex = timeline.imageIndex
-            baseImage.setImageResource(wallpapers[timeline.imageIndex])
-            nextImage.setImageResource(wallpapers[timeline.nextImageIndex])
+            val photos = loadedAlbum?.images
+            if (photos.isNullOrEmpty()) {
+                baseImage.setImageResource(wallpapers[timeline.imageIndex])
+                nextImage.setImageResource(wallpapers[timeline.nextImageIndex])
+                photoCredit.text = ""
+            } else {
+                baseImage.setImageBitmap(photos[timeline.imageIndex].bitmap)
+                nextImage.setImageBitmap(photos[timeline.nextImageIndex].bitmap)
+                photoCredit.text = photos[timeline.imageIndex].photo.credit
+            }
         }
         nextImage.alpha = timeline.fadeFraction
+    }
+
+    private fun loadWallpapers() {
+        handler.removeCallbacks(wallpaperCheck)
+        val token = ++wallpaperGeneration
+        val enabled = preferences.redditEnabled
+        val source = preferences.redditConfig.sourceKey
+        if (!enabled || loadedAlbum?.album?.let { it.source != source || !it.usable(System.currentTimeMillis()) } == true) applyAlbum(null)
+        val previous = loadedAlbum
+        wallpaperJob = wallpaperExecutor.submit {
+            val result = runCatching {
+                val store = WallpaperStore(this)
+                val metadata = store.read(source)
+                if (!enabled) null else if (metadata != null && metadata == previous?.album) previous else store.load(source)
+            }.getOrNull()
+            handler.post {
+                if (!resumed || token != wallpaperGeneration) return@post
+                applyAlbum(result)
+                // Enforce retention even when the launcher stays visible for days.
+                handler.postDelayed(wallpaperCheck, 60_000L)
+            }
+        }
+    }
+
+    private fun applyAlbum(album: LoadedAlbum?) {
+        if (loadedAlbum === album) return
+        loadedAlbum = album
+        val key = album?.album?.let { "${it.source}:${it.fetched}" }
+        timeline = SlideshowTimeline(album?.images?.size ?: wallpapers.size, if (key != null && key == restoredAlbumKey) restoredElapsed else 0L)
+        restoredAlbumKey = null
+        lastTick = SystemClock.elapsedRealtime()
+        renderedIndex = -1
+        renderWallpaper()
+        if (resumed) {
+            handler.removeCallbacks(slideshowTick)
+            handler.postDelayed(slideshowTick, timeline.nextFrameDelayMs)
+        }
     }
 
     private fun createLayout() {
@@ -179,6 +240,10 @@ class MainActivity : Activity() {
         weatherView = label("", 17f).apply { gravity = Gravity.END }
         root.addView(weatherView, FrameLayout.LayoutParams(dp(330), -2, Gravity.TOP or Gravity.END).apply {
             setMargins(dp(48), dp(48), dp(48), 0)
+        })
+        photoCredit = label("", 12f).apply { maxLines = 1; tag = "photo_credit" }
+        root.addView(photoCredit, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.START).apply {
+            setMargins(dp(48), 0, dp(48), dp(8))
         })
         hint = label(getString(R.string.dock_hint), 16f).apply { gravity = Gravity.CENTER }
         root.addView(hint, FrameLayout.LayoutParams(-1, dp(48), Gravity.BOTTOM).apply { bottomMargin = dp(24) })

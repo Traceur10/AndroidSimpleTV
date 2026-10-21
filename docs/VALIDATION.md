@@ -1,5 +1,15 @@
 # Validation — 2026-10-20
 
+## v0.4: Reddit wallpaper sources (API access pending)
+
+- Local `testDebugUnitTest lintDebug assembleDebug`: **BUILD SUCCESSFUL; 28 tests passed; 0 lint errors, 9 warnings**. The additional warning is the new TV settings activity’s fixed landscape orientation.
+- New tests exercise subreddit normalization and validation; filtering adult/spoiler/deleted/removed/video/gallery posts; trusted image-host validation; bounded six-image caching; landscape decode and panorama crop; offline loading; source isolation; failed/cancelled refresh preservation; expiry removal; empty listings; preview and setup gating; and switching between cached photos and bundled wallpaper with attribution.
+- Fixtures are generated locally in tests. No Reddit photos, credentials or user content are bundled. **Live Reddit authentication and downloading are unverified** because an approved installed-app client ID is not available. The app uses the documented application-only installed-client OAuth flow; Reddit eligibility/approval is an external prerequisite.
+- Installed on Sony BRAVIA API 31. TV UI checks verified Wallpapers navigation, multi-subreddit entry/save, setup gating when credentials are missing, and empty-preview fallback guidance. UI screenshot visually inspected. Actual cached photos/previews are tested in Robolectric, not with live Reddit images on the TV.
+- Sideload preserved Google TV Home resolution. Existing dock visibility/order, weather location/units and keep-awake preference are preserved. Reddit source remains off; bundled wallpapers remain usable.
+- Refresh is manual, foreground-only and cancelled on leaving wallpaper settings. No background downloader, system package changes, default-home changes, new permission, or system timeout changes.
+- README documents approval/setup, unsupported script/web client IDs, image limits, 48-hour cache expiry, manual refresh, offline fallback and remaining live-validation requirements.
+
 ## v0.3: remote-friendly dock settings and foreground keep-awake
 
 - `testDebugUnitTest lintDebug assembleDebug`: **BUILD SUCCESSFUL; 17 tests passed; 0 lint errors, 8 warnings**.
@@ -7,7 +17,7 @@
 - Installed v0.3 on the Sony BRAVIA API 31. ADB-injected remote events verified pick-up, several moves, Back cancellation without closing, and OK placement. Visibility toggles were exercised in the same open list. Screenshots were inspected.
 - User visibility, ordering and location preferences were preserved after testing. Keep slideshow awake was enabled on this TV; it remains off by default for new installs.
 - Android window diagnostics confirmed KEEP_SCREEN_ON and the launcher as the held-screen window in the foreground. Opening Settings cleared the held-screen window; stock Home also had no launcher hold. Returned the TV to stock Home, whose resolver is unchanged.
-- A full ten-minute idle soak and physical Power-button/sleep-timer behavior have **not** been tested. The option uses Android's supported foreground screen-on flag, not system timeout changes. Sony may have separate power policies.
+- User subsequently confirmed the launcher stayed visible for **25 minutes** without idle Ambient mode, the physical remote Power button turned the screen off, and powering on resumed the app. Separate sleep-timer behavior remains untested. The option uses Android's supported foreground screen-on flag, not system timeout changes. Sony may have separate power policies.
 - No TV system packages, screensaver configuration, default launcher, or system idle settings were changed. Reddit photos and a dedicated DreamService remain outside this revision.
 
 ## v0.2: dock customization and weather

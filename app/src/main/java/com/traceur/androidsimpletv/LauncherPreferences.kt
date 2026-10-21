@@ -7,6 +7,18 @@ import org.json.JSONObject
 /** Device-local settings. Component names survive label changes and duplicate app names. */
 internal class LauncherPreferences(context: Context) {
     private val prefs = context.getSharedPreferences("launcher", Context.MODE_PRIVATE)
+    var redditRetryAt: Long
+        get() = prefs.getLong("redditRetryAt", 0L)
+        set(value) { prefs.edit().putLong("redditRetryAt", value).apply() }
+    var redditEnabled: Boolean
+        get() = prefs.getBoolean("redditEnabled", false)
+        set(value) { prefs.edit().putBoolean("redditEnabled", value).apply() }
+    var redditConfig: RedditConfig
+        get() = RedditConfig(
+            runCatching { RedditConfig.subreddits(prefs.getString("subreddits", "earthporn")!!) }.getOrDefault(listOf("earthporn")),
+            prefs.getString("redditClientId", "")!!, prefs.getString("redditContact", "")!!)
+        set(value) { prefs.edit().putString("subreddits", value.subreddits.joinToString(","))
+            .putString("redditClientId", value.clientId).putString("redditContact", value.contact).apply() }
     var keepSlideshowAwake: Boolean
         get() = prefs.getBoolean("keepSlideshowAwake", false)
         set(value) { prefs.edit().putBoolean("keepSlideshowAwake", value).apply() }

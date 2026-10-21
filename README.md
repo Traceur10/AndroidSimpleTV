@@ -4,7 +4,7 @@ A quiet, native Kotlin Android TV launcher: fullscreen bundled landscapes, a clo
 
 ## What works
 
-- Three original bundled vector landscapes (alpine lake, dunes, coast), scaled to fill the screen without letterboxing. Wallpapers remain offline. Optional weather uses internet access; no storage or device-location permissions.
+- Three original bundled vector landscapes (alpine lake, dunes, coast), scaled to fill the screen without letterboxing. Bundled wallpapers remain offline. Optional Reddit downloads and weather use internet access; no storage or device-location permissions.
 - Each wallpaper is static for **55 seconds**, followed by a **5-second crossfade**. No pan/zoom or continuous redraw during the static interval.
 - Slideshow and clock callbacks stop in `onPause`. Returning resumes the same wallpaper/fade position; background time is excluded. Activity recreation also restores progress and dock selection.
 - Clock honors the device's locale and 12/24-hour preference; date uses the locale's ordering.
@@ -38,6 +38,32 @@ Open the permanent **Settings** dock tile, or press Menu in the launcher.
 Select **Weather location**, enter a city or postal code, then confirm a matching result. A new install has no preset location and sends no weather request until configured. Search text and selected city coordinates go to Open-Meteo; no GPS/device location permission is requested. Postal codes may resolve to city-level coordinates. **Temperature** toggles °F/°C; **Turn weather off** removes the saved location and cached reading. Preferences stay on this device and survive app updates.
 
 Weather uses the [Open-Meteo API](https://open-meteo.com/en/docs) and [geocoding API](https://open-meteo.com/en/docs/geocoding-api), with Open-Meteo/GeoNames attribution in Settings. The public endpoint is intended for non-commercial use; review [provider terms](https://open-meteo.com/en/terms) before commercial distribution. Weather data is CC BY 4.0. Internet failures leave wallpapers and app launching functional. Foreground polling stops on pause; requests are cancelled and late results ignored.
+
+## Reddit wallpaper sources
+
+Open **Settings → Wallpapers**. New installs use bundled landscapes and make no Reddit requests.
+
+1. **Choose subreddits**: enter up to five names separated by commas, optionally prefixed with `r/`. The initial suggestion is `earthporn`; no content is downloaded merely by saving it.
+2. **Set up Reddit access**: enter an approved **installed-app** client ID and the app owner’s Reddit username (used as the API contact). No password or client secret belongs in the TV app or this repository.
+3. **Refresh photos**: fetch top posts from the past week and download up to six suitable images. Leave this screen to cancel. Refresh is manual and rate-limited to at most once a minute; Reddit’s longer `Retry-After` responses are respected.
+4. **Preview downloaded photos**: inspect each image with Next photo, see its title and author, or open its Reddit post if a browser is installed.
+5. Enable **Use Reddit photos** and return to the launcher. Turning it off restores the bundled landscapes. **Clear downloaded photos** removes the private cache.
+
+### Reddit API setup and current limitations
+
+Reddit requires approved API access and OAuth; creating an ID alone may not grant access. Start with [Developer Platform & Accessing Reddit Data](https://support.reddithelp.com/hc/en-us/articles/14945211791892-Developer-Platform-Accessing-Reddit-Data) and the request link in the [Data API Wiki](https://support.reddithelp.com/hc/en-us/articles/16160319875092-Reddit-Data-API-Wiki). Describe this native TV wallpaper use case, how images are displayed, and caching/retention when applying. Reddit determines eligibility; access is not guaranteed.
+
+This implementation targets an approved **installed app** using Reddit’s [application-only OAuth installed-client grant](https://github.com/reddit-archive/reddit/wiki/OAuth2#application-only-oauth). It requests a temporary, user-less token with no client secret, uses `oauth.reddit.com` for listings, and keeps the token in memory only. `DO_NOT_TRACK_THIS_DEVICE` is used instead of a persistent device identifier. The owner username identifies the app in its User-Agent; it is not an account login. Script/web-app IDs requiring a secret are unsupported. Legacy technical documentation can change, so live compatibility must be verified against the approval granted to your app.
+
+**Live Reddit authentication/downloads have not yet been validated with approved credentials.** The UI, parser, cache, preview and slideshow paths are tested with local fixtures. Unapproved/invalid access reports an error and does not break the launcher. There is no anonymous-feed, scraping, proxy or login-password fallback.
+
+### Images, offline behavior and retention
+
+Only direct static JPG/PNG images hosted on `i.redd.it` are downloaded. Posts marked NSFW or spoilers, deleted/removed posts, videos, galleries and external image hosts are skipped. At least 1280×720 landscape images are required, center-cropped to 16:9 and capped at 1920×1080. Oversized responses and extreme dimensions are rejected; all network operations have timeouts and redirects are rejected. Up to 24 candidates are tried to obtain six images. This is a bounded 1080p cache, not original-resolution 4K storage.
+
+Photos, titles and author/post attribution stay in app-private storage; no storage permission is needed. No wallpaper network work runs in the background or automatically on the slideshow. Cached images remain usable offline for **up to 48 hours**; expired content is removed on the next foreground cache check and bundled landscapes take over. A successful refresh replaces the old collection; an empty successful listing clears it. Failed requests retain the last usable, unexpired collection. A changed subreddit selection will not display the previous source’s cache. Clearing the cache or uninstalling removes the local collection.
+
+Attribution appears on the slideshow and in previews, with a link to the original post. Images remain their creators’ content; Reddit hosting does not grant reuse rights. Review Reddit’s current access, display and retention requirements before distribution. No Reddit content is bundled in the repository or test APK.
 
 ## Idle screensaver versus Home
 
@@ -97,8 +123,8 @@ Never run launcher-disable, system-package-uninstall, or `set-home-activity` com
 
 ## Scope and contributions
 
-This MVP has no Reddit feeds, downloads, wallpaper picker, favorites groups, custom screensaver, background service, analytics, or boot receiver. Those can be added in focused follow-up PRs. Launching other apps relies on their exported TV activities; unavailable apps fail with a message rather than crashing the launcher.
+This MVP has no favorites groups, automatic wallpaper refresh, arbitrary image-host support, custom screensaver, background service, analytics, or boot receiver. Those can be added in focused follow-up PRs. Launching other apps relies on their exported TV activities; unavailable apps fail with a message rather than crashing the launcher.
 
-`SettingsActivity.kt` provides TV settings, `LauncherPreferences.kt` persists dock/weather choices, and `WeatherClient.kt` handles bounded HTTPS requests. `MainActivity.kt` owns the native view hierarchy, package discovery, remote focus and foreground lifecycle. `SlideshowTimeline.kt` is a pure Kotlin timing model with boundary tests. Robolectric tests exercise actual activity lifecycle and remote key gestures. All three landscapes and the banner artwork were authored for this project; banner lettering uses DejaVu Sans (see [font notice](docs/FONT-NOTICE.txt)).
+`WallpaperSettingsActivity.kt` provides source setup and previews, `RedditWallpapers.kt` handles OAuth and filtered listings, and `WallpaperStore.kt` owns bounded image decoding and the private cache. `SettingsActivity.kt` provides TV settings, `LauncherPreferences.kt` persists dock/weather choices, and `WeatherClient.kt` handles bounded HTTPS requests. `MainActivity.kt` owns the native view hierarchy, package discovery, remote focus and foreground lifecycle. `SlideshowTimeline.kt` is a pure Kotlin timing model with boundary tests. Robolectric tests exercise actual activity lifecycle and remote key gestures. All three landscapes and the banner artwork were authored for this project; banner lettering uses DejaVu Sans (see [font notice](docs/FONT-NOTICE.txt)).
 
 Manifest setup follows the [Android TV app guide](https://developer.android.com/training/tv/get-started/create). Tool versions follow the [AGP 8.9 compatibility table](https://developer.android.com/build/releases/agp-8-9-0-release-notes).

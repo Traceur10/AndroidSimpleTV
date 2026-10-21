@@ -39,4 +39,38 @@
     <string name="moving_app_row">↕ %1$d.  %2$s — moving</string>
     <string name="keep_slideshow_awake">Keep slideshow awake</string>
     <string name="keep_slideshow_awake_help">Prevent idle Ambient mode while the launcher is visible. Stops when you open Settings or another app. The remote Power button and TV sleep timers still apply.</string>
+    <string name="wallpapers_title">Wallpapers</string>
+    <string name="reddit_enable">Use Reddit photos</string>
+    <string name="reddit_intro">Use downloaded photos in the slideshow. Bundled landscapes appear when photos are unavailable. Refresh manually below; no downloads happen until you choose Refresh photos.</string>
+    <string name="reddit_subreddits">Subreddits: %1$s</string>
+    <string name="reddit_choose_subreddits">Choose subreddits</string>
+    <string name="reddit_subreddit_hint">earthporn, spaceporn</string>
+    <string name="reddit_subreddit_error">Enter 1–5 subreddit names, separated by commas. Letters, numbers and underscores only.</string>
+    <string name="reddit_source_saved">Source saved. Refresh photos to download from these subreddits.</string>
+    <string name="reddit_access">Set up Reddit access</string>
+    <string name="reddit_access_saved">Reddit access: saved — edit</string>
+    <string name="reddit_access_help">Reddit requires an approved installed-app client ID. Enter its ID and the app owner’s Reddit username. No password or client secret is needed. See the project README for setup.</string>
+    <string name="reddit_client_id">Approved installed-app client ID</string>
+    <string name="reddit_contact">App owner Reddit username</string>
+    <string name="reddit_access_invalid">Enter an installed-app client ID and a valid Reddit username.</string>
+    <string name="reddit_access_not_verified">Saved. Choose Refresh photos to check Reddit access.</string>
+    <string name="reddit_setup_needed">Set up approved Reddit API access before downloading photos.</string>
+    <string name="reddit_save">Save</string>
+    <string name="reddit_refresh">Refresh photos</string>
+    <string name="reddit_preview">Preview downloaded photos</string>
+    <string name="reddit_clear">Clear downloaded photos</string>
+    <string name="reddit_cleared">Downloaded photos removed. Bundled landscapes will be used.</string>
+    <string name="reddit_empty">No usable photos cached for these subreddits. Bundled landscapes are ready.</string>
+    <plurals name="reddit_cached_count"><item quantity="one">%1$d photo ready for offline use.</item><item quantity="other">%1$d photos ready for offline use.</item></plurals>
+    <string name="reddit_downloading">Downloading landscape photos… Leave this screen to cancel.</string>
+    <plurals name="reddit_downloaded"><item quantity="one">%1$d photo downloaded. Preview it, then enable Use Reddit photos to show it on the launcher.</item><item quantity="other">%1$d photos downloaded. Preview them, then enable Use Reddit photos to show them on the launcher.</item></plurals>
+    <string name="reddit_preview_number">Photo %1$d of %2$d</string>
+    <string name="reddit_preview_caption">%1$s\n%2$s</string>
+    <string name="reddit_next">Next photo</string>
+    <string name="reddit_open_post">Open Reddit post</string>
+    <string name="reddit_no_browser">No browser is installed to open this Reddit post.</string>
+    <string name="reddit_denied">Reddit denied access. Check the approved installed-app ID and its permissions. Existing unexpired photos remain available.</string>
+    <string name="reddit_rate_limit">Please wait before refreshing again (at least one minute, or longer if Reddit requests it). Existing unexpired photos remain available.</string>
+    <string name="reddit_failed">Could not refresh or load photos. Check your connection and try a subreddit with direct landscape images. Any usable cached photos will be kept; otherwise bundled landscapes appear.</string>
+    <string name="reddit_privacy">Refresh sends your chosen subreddits and app identification to Reddit. Up to six direct Reddit-hosted JPG/PNG landscape photos from the top posts this week are kept privately for up to 48 hours, then removed when the app is active. Posts marked NSFW, spoilers, videos and galleries are excluded. Photos remain their creators’ work; posting on Reddit does not grant reuse rights. No account login, storage permission or background service is used.</string>
 </resources>

@@ -53,6 +53,9 @@ class SettingsActivity : Activity() {
             if (apps.isEmpty()) status.setText(R.string.apps_loading)
             else dockDialog = DockSettingsDialogs.visibility(this, apps, preferences)
         }
+        button(getString(R.string.wallpapers_title)) {
+            startActivity(android.content.Intent(this, WallpaperSettingsActivity::class.java))
+        }
         button(getString(R.string.sort_apps)) {
             preferences.sortAlphabetically()
             status.setText(R.string.sorted_apps)
