@@ -1,5 +1,15 @@
 # Validation — 2026-10-20
 
+## v0.5: hourly Commons/NASA wallpapers and storage limits
+
+- Local `testDebugUnitTest lintDebug assembleDebug`: **BUILD SUCCESSFUL; 29 tests passed; 0 lint errors, 11 warnings**. Two new advisory warnings concern intentionally synchronous persistence of the refresh lease and using conservative filesystem free-space checks rather than asking Android to reclaim caches.
+- Tests cover Commons attribution/license parsing, NASA size selection, trusted URLs, the persisted hourly lease across recreation/source changes/clock rollback, four-image limits, 512 KiB file and 5 MiB directory checks, staging cleanup, offline retention on failed/empty refresh, unchanged-image reuse without downloading/recompression, cancelled writes, previews and slideshow switching.
+- Live public API checks succeeded. On Sony BRAVIA API 31, one app refresh downloaded **two Commons images and two NASA images**. Four JPEG files plus metadata totaled **1,156,056 bytes (about 1.10 MiB)**; the largest image was 418,204 bytes. No API key/account was needed.
+- On-device previews displayed credits and usage/license details for both providers. Enabling online wallpapers displayed the real downloaded collection on the launcher. Screenshots inspected. A second manual refresh reported the next allowed hour and left the album unchanged; returning to the launcher also reused the collection. Existing dock/weather/keep-awake settings were preserved, and stock Home resolution remained unchanged.
+- Public wallpapers are enabled on this test TV; new installs default to bundled wallpapers until enabled. Reddit is removed from the active UI/network path and its old cache is purged. Unsplash is deferred because its API guidelines exclude wallpaper apps.
+- Automatic refresh is scheduled only in the foreground and shares the persisted one-hour gate with manual refresh. The actual next-hour boundary has been tested with injected timestamps, **not a full one-hour device soak**. Long-run traffic, physically full TV storage, provider outages/429s and disconnected-network behavior have not been exercised on hardware; deterministic tests cover cache/gate behavior.
+- Limits apply to the wallpaper directory, not the installed APK or unrelated weather/app data. Four-photo steady storage is at most 2 MiB plus metadata; temporary replacement is capped at 5 MiB. Per-refresh HTTP response bodies are budgeted to 16 MiB, with at most 10 requests and no original image over 3 MiB. Decoded bitmap memory is separate from disk usage.
+
 ## v0.4: Reddit wallpaper sources (API access pending)
 
 - Local `testDebugUnitTest lintDebug assembleDebug`: **BUILD SUCCESSFUL; 28 tests passed; 0 lint errors, 9 warnings**. The additional warning is the new TV settings activity’s fixed landscape orientation.

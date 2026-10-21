@@ -31,6 +31,7 @@ class MainActivity : Activity() {
     private val wallpaperExecutor = Executors.newSingleThreadExecutor()
     private var wallpaperJob: java.util.concurrent.Future<*>? = null
     private var wallpaperGeneration = 0
+    private val wallpaperClient = PublicWallpaperClient()
     private var loadedAlbum: LoadedAlbum? = null
     private var restoredAlbumKey: String? = null
     private var restoredElapsed = 0L
@@ -125,6 +126,7 @@ class MainActivity : Activity() {
         consumedKey = null
         wallpaperGeneration++
         wallpaperJob?.cancel(true)
+        wallpaperClient.cancel()
         handler.removeCallbacks(wallpaperCheck)
         weatherGeneration++
         weatherJob?.cancel(true)
@@ -172,7 +174,7 @@ class MainActivity : Activity() {
             } else {
                 baseImage.setImageBitmap(photos[timeline.imageIndex].bitmap)
                 nextImage.setImageBitmap(photos[timeline.nextImageIndex].bitmap)
-                photoCredit.text = photos[timeline.imageIndex].photo.credit
+                photoCredit.text = photos[timeline.imageIndex].photo.let { "${it.credit} · ${it.license} · Cropped · Settings → Wallpapers for source" }
             }
         }
         nextImage.alpha = timeline.fadeFraction
@@ -181,20 +183,32 @@ class MainActivity : Activity() {
     private fun loadWallpapers() {
         handler.removeCallbacks(wallpaperCheck)
         val token = ++wallpaperGeneration
-        val enabled = preferences.redditEnabled
-        val source = preferences.redditConfig.sourceKey
+        val enabled = preferences.publicWallpapersEnabled
+        val config = preferences.wallpaperConfig
+        val source = config.sourceKey
         if (!enabled || loadedAlbum?.album?.let { it.source != source || !it.usable(System.currentTimeMillis()) } == true) applyAlbum(null)
         val previous = loadedAlbum
         wallpaperJob = wallpaperExecutor.submit {
             val result = runCatching {
                 val store = WallpaperStore(this)
                 val metadata = store.read(source)
-                if (!enabled) null else if (metadata != null && metadata == previous?.album) previous else store.load(source)
+                val initial = if (!enabled) null else if (metadata != null && metadata == previous?.album) previous else store.load(source)
+                // Show the existing offline album before waiting for network refresh.
+                handler.post { if (resumed && token == wallpaperGeneration) applyAlbum(initial) }
+                if (enabled && preferences.claimWallpaperRefresh()) {
+                    try { store.refresh(config, wallpaperClient) }
+                    catch (e: WallpaperHttpException) {
+                        if (e.code == 429) preferences.wallpaperRetryAt = maxOf(preferences.wallpaperRetryAt, System.currentTimeMillis() + e.retryMs)
+                    } catch (_: java.io.IOException) { /* Keep the last complete album on failure. */ }
+                    checkInterrupted()
+                    val current = store.read(source)
+                    if (current == initial?.album) initial else store.load(source)
+                } else initial
             }.getOrNull()
             handler.post {
                 if (!resumed || token != wallpaperGeneration) return@post
                 applyAlbum(result)
-                // Enforce retention even when the launcher stays visible for days.
+                // Recheck the persisted hourly lease without making a network request every minute.
                 handler.postDelayed(wallpaperCheck, 60_000L)
             }
         }
@@ -241,7 +255,7 @@ class MainActivity : Activity() {
         root.addView(weatherView, FrameLayout.LayoutParams(dp(330), -2, Gravity.TOP or Gravity.END).apply {
             setMargins(dp(48), dp(48), dp(48), 0)
         })
-        photoCredit = label("", 12f).apply { maxLines = 1; tag = "photo_credit" }
+        photoCredit = label("", 12f).apply { maxLines = 2; tag = "photo_credit" }
         root.addView(photoCredit, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.START).apply {
             setMargins(dp(48), 0, dp(48), dp(8))
         })

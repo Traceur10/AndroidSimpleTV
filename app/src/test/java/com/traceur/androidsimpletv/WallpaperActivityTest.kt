@@ -33,25 +33,26 @@ class WallpaperActivityTest {
         val bitmap = Bitmap.createBitmap(1280, 720, Bitmap.Config.RGB_565)
         val bytes = ByteArrayOutputStream().also { bitmap.compress(Bitmap.CompressFormat.JPEG, 80, it) }.toByteArray()
         bitmap.recycle()
-        WallpaperStore(context).replace("earthporn", listOf(RedditPhoto("test1", "Test", "artist", "earthporn", "https://i.redd.it/test1.jpg", "https://www.reddit.com/r/earthporn/comments/test1/test/"))) { bytes }
+        WallpaperStore(context).replace("COMMONS+NASA", listOf(WallpaperPhoto("test1", "Test", "artist", "https://thumb.wikimedia.org/test1.jpg", "https://commons.wikimedia.org/wiki/File:test1.jpg", "CC0", "https://creativecommons.org/publicdomain/zero/1.0/"))) { bytes }
     }
     @Test fun `offline photos display with attribution and disabling restores bundled images`() {
         seed()
         val prefs = LauncherPreferences(RuntimeEnvironment.getApplication())
-        assertFalse(prefs.redditEnabled)
-        prefs.redditEnabled = true
+        assertFalse(prefs.publicWallpapersEnabled)
+        prefs.publicWallpapersEnabled = true
+        prefs.wallpaperRetryAt = System.currentTimeMillis() + LauncherPreferences.WALLPAPER_INTERVAL_MS
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         val credit = controller.get().window.decorView.findViewWithTag<TextView>("photo_credit")
-        waitFor { credit.text.contains("u/artist") }
+        waitFor { credit.text.contains("artist") }
         controller.pause()
         val elapsed = controller.get().timeline.elapsedMs
         controller.resume()
         assertEquals(elapsed, controller.get().timeline.elapsedMs)
-        controller.pause(); prefs.redditEnabled = false; controller.resume()
+        controller.pause(); prefs.publicWallpapersEnabled = false; controller.resume()
         assertEquals("", credit.text.toString())
         controller.pause().stop().destroy()
     }
-    @Test fun `settings previews cached photos without credentials and gates downloads on setup`() {
+    @Test fun `settings previews cached photos and respects hourly refresh gate`() {
         seed()
         val controller = Robolectric.buildActivity(WallpaperSettingsActivity::class.java).setup()
         fun button(text: String) = views(controller.get().window.decorView).filterIsInstance<Button>().first { it.text.toString() == text }
@@ -59,13 +60,12 @@ class WallpaperActivityTest {
         button("Preview downloaded photos").performClick()
         waitFor { ShadowAlertDialog.getLatestAlertDialog()?.isShowing == true }
         var dialog = ShadowAlertDialog.getLatestAlertDialog()
-        assertTrue(views(dialog.window!!.decorView).filterIsInstance<TextView>().any { it.text.contains("u/artist") })
+        assertTrue(views(dialog.window!!.decorView).filterIsInstance<TextView>().any { it.text.contains("artist") })
         dialog.getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
+        LauncherPreferences(controller.get()).wallpaperRetryAt = System.currentTimeMillis() + LauncherPreferences.WALLPAPER_INTERVAL_MS
         button("Refresh photos").performClick()
-        dialog = ShadowAlertDialog.getLatestAlertDialog()
-        assertTrue(views(dialog.window!!.decorView).filterIsInstance<TextView>().any { it.text.contains("approved installed-app") })
-        assertFalse(LauncherPreferences(controller.get()).redditConfig.ready)
-        assertFalse(LauncherPreferences(controller.get()).redditEnabled)
+        waitFor { views(controller.get().window.decorView).filterIsInstance<TextView>().any { it.text.contains("Next refresh allowed") } }
+        assertFalse(LauncherPreferences(controller.get()).publicWallpapersEnabled)
         controller.pause().stop().destroy()
         assertFalse(dialog.isShowing)
     }

@@ -8,23 +8,27 @@ import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 
-internal data class WallpaperAlbum(val source: String, val fetched: Long, val photos: List<RedditPhoto>) {
-    fun usable(now: Long) = now >= fetched && now - fetched < MAX_AGE_MS
-    companion object { const val MAX_AGE_MS = 48 * 60 * 60_000L }
+internal data class WallpaperAlbum(val source: String, val fetched: Long, val photos: List<WallpaperPhoto>) {
+    fun usable(now: Long) = now >= fetched
 }
-internal data class LoadedWallpaper(val photo: RedditPhoto, val bitmap: Bitmap)
+internal data class LoadedWallpaper(val photo: WallpaperPhoto, val bitmap: Bitmap)
 internal data class LoadedAlbum(val album: WallpaperAlbum, val images: List<LoadedWallpaper>)
 
 /** Small app-private cache; committed metadata switches only after all new files are ready. */
 internal class WallpaperStore(context: Context) {
-    private val root = File(context.filesDir, "reddit-wallpapers")
+    private val root = File(context.filesDir, "public-wallpapers")
     private val manifest get() = File(root, "album.json")
 
     fun read(source: String, now: Long = System.currentTimeMillis()): WallpaperAlbum? = synchronized(lock) {
+        File(root.parentFile, "reddit-wallpapers").deleteRecursively()
         val album = readManifest() ?: run { root.deleteRecursively(); return@synchronized null }
         val keep = album.photos.map { "${it.id}.jpg" }.toSet() + "album.json"
         root.listFiles()?.filter { it.name !in keep }?.forEach { it.deleteRecursively() }
         if (!album.usable(now)) { root.deleteRecursively(); return@synchronized null }
+        if (root.walkTopDown().filter { it.isFile }.sumOf { it.length() } > MAX_DISK_BYTES ||
+            album.photos.any { File(root, "${it.id}.jpg").length() > MAX_FILE_BYTES }) {
+            root.deleteRecursively(); return@synchronized null
+        }
         album.takeIf { it.source == source }
     }
     private fun readManifest(): WallpaperAlbum? = runCatching {
@@ -32,8 +36,8 @@ internal class WallpaperStore(context: Context) {
         val o = JSONObject(manifest.readText())
         val a = o.getJSONArray("photos")
         require(a.length() in 1..MAX_PHOTOS)
-        val photos = (0 until a.length()).map { RedditPhoto.fromJson(a.getJSONObject(it)) }
-        require(photos.all { Regex("[a-z0-9]{1,16}").matches(it.id) })
+        val photos = (0 until a.length()).map { WallpaperPhoto.fromJson(a.getJSONObject(it)) }
+        require(photos.all { Regex("[a-z0-9]{1,32}").matches(it.id) })
         WallpaperAlbum(o.getString("source"), o.getLong("fetched"), photos)
     }.getOrNull()
 
@@ -50,30 +54,57 @@ internal class WallpaperStore(context: Context) {
 
     fun clear() = synchronized(lock) { root.deleteRecursively(); Unit }
 
-    fun refresh(config: RedditConfig, client: RedditClient): WallpaperAlbum = replace(config.sourceKey, client.photos(config), client::image)
+    fun refresh(config: WallpaperConfig, client: PublicWallpaperClient): WallpaperAlbum {
+        val old = read(config.sourceKey)?.photos?.map { it.id }?.toSet().orEmpty()
+        val candidates = client.photos(config)
+        return replace(config.sourceKey, candidates.filter { it.id !in old } + candidates.filter { it.id in old }, client::image)
+    }
 
-    internal fun replace(source: String, candidates: List<RedditPhoto>, download: (RedditPhoto) -> ByteArray): WallpaperAlbum = synchronized(lock) {
+    internal fun replace(source: String, candidates: List<WallpaperPhoto>, download: (WallpaperPhoto) -> ByteArray): WallpaperAlbum = synchronized(lock) {
         checkInterrupted()
+        read(source) // Purge old Reddit data, incomplete writes and invalid cache before staging.
         root.mkdirs()
+        if (root.usableSpace < MAX_DISK_BYTES + 3L * 1024 * 1024) throw IOException("Not enough free TV storage")
+        val previous = readManifest()?.photos?.associateBy { it.id }.orEmpty()
         val staging = File(root, "pending").apply { deleteRecursively(); mkdirs() }
         try {
-            val accepted = mutableListOf<RedditPhoto>()
-            for (photo in candidates.take(24)) {
+            val accepted = mutableListOf<WallpaperPhoto>()
+            for (photo in candidates.distinctBy { it.id }.take(8)) {
                 checkInterrupted()
                 if (accepted.size == MAX_PHOTOS) break
                 try {
+                    val existing = File(root, "${photo.id}.jpg")
+                    if (previous[photo.id]?.imageUrl == photo.imageUrl && existing.length() in 1..MAX_FILE_BYTES) {
+                        val bytes = existing.readBytes()
+                        val checked = decode(bytes)
+                        if (checked != null) {
+                            checked.recycle()
+                            File(staging, "${photo.id}.jpg").writeBytes(bytes)
+                            accepted.add(photo)
+                            continue
+                        }
+                    }
                     val bitmap = decode(download(photo)) ?: continue
                     try {
-                        File(staging, "${photo.id}.jpg").outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
-                        accepted.add(photo)
+                        var encoded: ByteArray? = null
+                        for (quality in listOf(80, 65, 50, 35)) {
+                            val buffer = java.io.ByteArrayOutputStream()
+                            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, buffer)
+                            if (buffer.size() <= MAX_FILE_BYTES) { encoded = buffer.toByteArray(); break }
+                        }
+                        if (encoded != null) {
+                            val used = root.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+                            if (used + encoded.size + 64 * 1024 > MAX_DISK_BYTES) throw IOException("Wallpaper cache is full")
+                            File(staging, "${photo.id}.jpg").writeBytes(encoded)
+                            accepted.add(photo)
+                        }
                     } finally { bitmap.recycle() }
                 } catch (e: java.io.InterruptedIOException) { throw e }
-                catch (e: RedditAccessException) { if (e.code == 429) throw e }
+                catch (e: WallpaperHttpException) { if (e.code == 429) throw e }
                 catch (_: IOException) { /* A bad image does not discard other usable images. */ }
             }
             checkInterrupted()
             if (accepted.isEmpty()) {
-                if (candidates.isEmpty()) root.deleteRecursively()
                 throw IOException("No usable landscape photos")
             }
             val album = WallpaperAlbum(source, System.currentTimeMillis(), accepted)
@@ -101,10 +132,11 @@ internal class WallpaperStore(context: Context) {
 
     companion object {
         private val lock = Any()
-        const val MAX_PHOTOS = 6
-        private const val MAX_FILE_BYTES = 8L * 1024 * 1024
+        const val MAX_PHOTOS = 4
+        const val MAX_FILE_BYTES = 512L * 1024
+        const val MAX_DISK_BYTES = 5L * 1024 * 1024
         internal fun decode(bytes: ByteArray): Bitmap? {
-            if (bytes.size > MAX_FILE_BYTES) return null
+            if (bytes.size > PublicWallpaperClient.IMAGE_LIMIT) return null
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
             val w = bounds.outWidth; val h = bounds.outHeight

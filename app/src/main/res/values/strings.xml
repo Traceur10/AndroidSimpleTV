@@ -40,37 +40,28 @@
     <string name="keep_slideshow_awake">Keep slideshow awake</string>
     <string name="keep_slideshow_awake_help">Prevent idle Ambient mode while the launcher is visible. Stops when you open Settings or another app. The remote Power button and TV sleep timers still apply.</string>
     <string name="wallpapers_title">Wallpapers</string>
-    <string name="reddit_enable">Use Reddit photos</string>
-    <string name="reddit_intro">Use downloaded photos in the slideshow. Bundled landscapes appear when photos are unavailable. Refresh manually below; no downloads happen until you choose Refresh photos.</string>
-    <string name="reddit_subreddits">Subreddits: %1$s</string>
-    <string name="reddit_choose_subreddits">Choose subreddits</string>
-    <string name="reddit_subreddit_hint">earthporn, spaceporn</string>
-    <string name="reddit_subreddit_error">Enter 1–5 subreddit names, separated by commas. Letters, numbers and underscores only.</string>
-    <string name="reddit_source_saved">Source saved. Refresh photos to download from these subreddits.</string>
-    <string name="reddit_access">Set up Reddit access</string>
-    <string name="reddit_access_saved">Reddit access: saved — edit</string>
-    <string name="reddit_access_help">Reddit requires an approved installed-app client ID. Enter its ID and the app owner’s Reddit username. No password or client secret is needed. See the project README for setup.</string>
-    <string name="reddit_client_id">Approved installed-app client ID</string>
-    <string name="reddit_contact">App owner Reddit username</string>
-    <string name="reddit_access_invalid">Enter an installed-app client ID and a valid Reddit username.</string>
-    <string name="reddit_access_not_verified">Saved. Choose Refresh photos to check Reddit access.</string>
-    <string name="reddit_setup_needed">Set up approved Reddit API access before downloading photos.</string>
-    <string name="reddit_save">Save</string>
-    <string name="reddit_refresh">Refresh photos</string>
-    <string name="reddit_preview">Preview downloaded photos</string>
-    <string name="reddit_clear">Clear downloaded photos</string>
-    <string name="reddit_cleared">Downloaded photos removed. Bundled landscapes will be used.</string>
-    <string name="reddit_empty">No usable photos cached for these subreddits. Bundled landscapes are ready.</string>
-    <plurals name="reddit_cached_count"><item quantity="one">%1$d photo ready for offline use.</item><item quantity="other">%1$d photos ready for offline use.</item></plurals>
-    <string name="reddit_downloading">Downloading landscape photos… Leave this screen to cancel.</string>
-    <plurals name="reddit_downloaded"><item quantity="one">%1$d photo downloaded. Preview it, then enable Use Reddit photos to show it on the launcher.</item><item quantity="other">%1$d photos downloaded. Preview them, then enable Use Reddit photos to show them on the launcher.</item></plurals>
-    <string name="reddit_preview_number">Photo %1$d of %2$d</string>
-    <string name="reddit_preview_caption">%1$s\n%2$s</string>
-    <string name="reddit_next">Next photo</string>
-    <string name="reddit_open_post">Open Reddit post</string>
-    <string name="reddit_no_browser">No browser is installed to open this Reddit post.</string>
-    <string name="reddit_denied">Reddit denied access. Check the approved installed-app ID and its permissions. Existing unexpired photos remain available.</string>
-    <string name="reddit_rate_limit">Please wait before refreshing again (at least one minute, or longer if Reddit requests it). Existing unexpired photos remain available.</string>
-    <string name="reddit_failed">Could not refresh or load photos. Check your connection and try a subreddit with direct landscape images. Any usable cached photos will be kept; otherwise bundled landscapes appear.</string>
-    <string name="reddit_privacy">Refresh sends your chosen subreddits and app identification to Reddit. Up to six direct Reddit-hosted JPG/PNG landscape photos from the top posts this week are kept privately for up to 48 hours, then removed when the app is active. Posts marked NSFW, spoilers, videos and galleries are excluded. Photos remain their creators’ work; posting on Reddit does not grant reuse rights. No account login, storage permission or background service is used.</string>
+    <string name="public_enable">Use online wallpapers</string>
+    <string name="public_off">Online wallpapers are off. Downloads stopped.</string>
+    <string name="public_intro">Refresh at most once an hour while the launcher is visible. Four photos, about 2 MB saved, at most 5 MB during updates. The slideshow reuses these photos between refreshes.</string>
+    <string name="public_sources">Sources: %1$s</string>
+    <string name="public_choose_sources">Wallpaper sources</string>
+    <string name="public_need_source">Choose at least one source.</string>
+    <string name="public_source_saved">Sources saved. They take effect at the next allowed refresh.</string>
+    <string name="public_save">Save</string>
+    <string name="public_refresh">Refresh photos</string>
+    <string name="public_preview">Preview downloaded photos</string>
+    <string name="public_clear">Clear photos and turn off downloads</string>
+    <string name="public_cleared">Downloaded photos removed. Online wallpapers are off.</string>
+    <string name="public_empty">No photos saved for these sources. Bundled landscapes are ready.</string>
+    <plurals name="public_cached_count"><item quantity="one">%1$d photo ready for offline use.</item><item quantity="other">%1$d photos ready for offline use.</item></plurals>
+    <string name="public_downloading">Checking for new photos… Leave this screen to cancel.</string>
+    <plurals name="public_downloaded"><item quantity="one">%1$d photo saved. Enable Use online wallpapers to display it.</item><item quantity="other">%1$d photos saved. Enable Use online wallpapers to display them.</item></plurals>
+    <string name="public_preview_number">Photo %1$d of %2$d</string>
+    <string name="public_preview_caption">%1$s\n%2$s\n%3$s · Cropped to fit TV\n%4$s</string>
+    <string name="public_next">Next photo</string>
+    <string name="public_open_source">Open source page</string>
+    <string name="public_no_browser">No browser is installed to open the source page.</string>
+    <string name="public_wait">Next refresh allowed at %1$s. Saved photos remain available.</string>
+    <string name="public_failed">Could not update photos. Saved photos remain available; bundled landscapes are used if needed. Check your connection and available TV storage.</string>
+    <string name="public_privacy">Wikimedia Commons supplies nature scenes; NASA supplies space images. No account or API key is needed. Requests go only to the selected providers. Downloads stop when you leave the launcher or this screen. Photos are resized to at most 1080p and old collections are replaced. Credits and license details are available in previews.</string>
 </resources>

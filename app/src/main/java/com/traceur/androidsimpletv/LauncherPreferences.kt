@@ -7,18 +7,23 @@ import org.json.JSONObject
 /** Device-local settings. Component names survive label changes and duplicate app names. */
 internal class LauncherPreferences(context: Context) {
     private val prefs = context.getSharedPreferences("launcher", Context.MODE_PRIVATE)
-    var redditRetryAt: Long
-        get() = prefs.getLong("redditRetryAt", 0L)
-        set(value) { prefs.edit().putLong("redditRetryAt", value).apply() }
-    var redditEnabled: Boolean
-        get() = prefs.getBoolean("redditEnabled", false)
-        set(value) { prefs.edit().putBoolean("redditEnabled", value).apply() }
-    var redditConfig: RedditConfig
-        get() = RedditConfig(
-            runCatching { RedditConfig.subreddits(prefs.getString("subreddits", "earthporn")!!) }.getOrDefault(listOf("earthporn")),
-            prefs.getString("redditClientId", "")!!, prefs.getString("redditContact", "")!!)
-        set(value) { prefs.edit().putString("subreddits", value.subreddits.joinToString(","))
-            .putString("redditClientId", value.clientId).putString("redditContact", value.contact).apply() }
+    var publicWallpapersEnabled: Boolean
+        get() = prefs.getBoolean("publicWallpapersEnabled", false)
+        set(value) { prefs.edit().putBoolean("publicWallpapersEnabled", value).apply() }
+    var wallpaperConfig: WallpaperConfig
+        get() = WallpaperConfig(prefs.getStringSet("wallpaperSources", setOf("COMMONS", "NASA"))!!
+            .mapNotNull { runCatching { WallpaperSource.valueOf(it) }.getOrNull() }.toSet().ifEmpty { setOf(WallpaperSource.COMMONS, WallpaperSource.NASA) })
+        set(value) { require(value.sources.isNotEmpty()); prefs.edit().putStringSet("wallpaperSources", value.sources.map { it.name }.toSet()).apply() }
+    var wallpaperRetryAt: Long
+        get() = prefs.getLong("wallpaperRetryAt", 0)
+        set(value) { prefs.edit().putLong("wallpaperRetryAt", value).commit() }
+
+    /** One persisted lease shared by auto/manual refresh, including failure and cancellation. */
+    fun claimWallpaperRefresh(now: Long = System.currentTimeMillis()): Boolean = synchronized(refreshLock) {
+        if (now < wallpaperRetryAt) return@synchronized false
+        prefs.edit().putLong("wallpaperRetryAt", now + WALLPAPER_INTERVAL_MS).commit()
+    }
+    companion object { const val WALLPAPER_INTERVAL_MS = 3_600_000L; private val refreshLock = Any() }
     var keepSlideshowAwake: Boolean
         get() = prefs.getBoolean("keepSlideshowAwake", false)
         set(value) { prefs.edit().putBoolean("keepSlideshowAwake", value).apply() }
