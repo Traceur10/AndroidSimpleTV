@@ -13,6 +13,7 @@ import android.os.SystemClock
 import android.text.format.DateFormat
 import android.view.Gravity
 import android.view.KeyEvent
+import android.view.WindowManager
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
@@ -97,6 +98,8 @@ class MainActivity : Activity() {
         super.onResume()
         fullscreen()
         resumed = true
+        if (preferences.keepSlideshowAwake) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         lastTick = SystemClock.elapsedRealtime()
         slideshowTick.run()
         clockTick.run()
@@ -107,6 +110,7 @@ class MainActivity : Activity() {
     override fun onPause() {
         advanceTimeline()
         resumed = false
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         consumedKey = null
         weatherGeneration++
         weatherJob?.cancel(true)

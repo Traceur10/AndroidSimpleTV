@@ -5,7 +5,6 @@
     <string name="dock_controls">← →  Choose    OK  Open    ↑ / Back  Hide · Menu  Settings</string>
     <string name="launch_failed">This app is no longer available</string>
     <string name="settings_title">Settings</string>
-    <string name="manage_apps">Manage dock apps</string>
     <string name="sort_apps">Sort apps A–Z</string>
     <string name="sorted_apps">Apps sorted alphabetically. Hidden apps remain hidden.</string>
     <string name="weather_location">Weather location: %1$s</string>
@@ -18,11 +17,6 @@
     <string name="weather_attribution">Weather by Open-Meteo (open-meteo.com), CC BY 4.0. City search uses GeoNames. Search text and selected city coordinates are sent to Open-Meteo; no device location permission is used. Postal codes may resolve to city-level coordinates.</string>
     <string name="apps_loading">No TV apps loaded yet. Please try again.</string>
     <string name="app_hidden">%1$s — hidden</string>
-    <string name="app_shown">%1$s — shown</string>
-    <string name="show_app">Show in dock</string>
-    <string name="hide_app">Hide from dock</string>
-    <string name="move_earlier">Move earlier</string>
-    <string name="move_later">Move later</string>
     <string name="location_hint">City or postal code</string>
     <string name="location_search">Weather location</string>
     <string name="search">Search</string>
@@ -37,4 +31,12 @@
     <string name="weather_loading">Loading weather…</string>
     <string name="weather_cached">Cached · updated %1$s</string>
     <string name="weather_display">%1$s\n%2$s%3$s</string>
+    <string name="move_apps">Move apps</string>
+    <string name="show_hide_apps">Show/hide apps</string>
+    <string name="move_apps_help">↑ ↓ Choose an app · OK Pick up · Back Close</string>
+    <string name="move_apps_active">Moving %1$s · ↑ ↓ Reposition · OK Place · Back Cancel move</string>
+    <string name="app_order_row">%1$d.  %2$s</string>
+    <string name="moving_app_row">↕ %1$d.  %2$s — moving</string>
+    <string name="keep_slideshow_awake">Keep slideshow awake</string>
+    <string name="keep_slideshow_awake_help">Prevent idle Ambient mode while the launcher is visible. Stops when you open Settings or another app. The remote Power button and TV sleep timers still apply.</string>
 </resources>

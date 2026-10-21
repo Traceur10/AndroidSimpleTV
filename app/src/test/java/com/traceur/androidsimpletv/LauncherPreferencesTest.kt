@@ -16,8 +16,7 @@ class LauncherPreferencesTest {
         val prefs = settings()
         val apps = listOf("a/main", "b/main", "c/main")
         prefs.setHidden("b/main", true)
-        prefs.move("c/main", -1, apps)
-        prefs.move("c/main", -1, apps)
+        prefs.saveOrder(listOf("c/main", "a/main", "b/main"))
         val restored = settings()
         assertEquals(listOf("c/main", "a/main", "b/main"), restored.ordered(apps))
         assertTrue(restored.isHidden("b/main"))
@@ -27,13 +26,12 @@ class LauncherPreferencesTest {
 
     @Test fun `sorting preserves hidden choices and missing apps do not break order`() {
         val prefs = settings()
-        prefs.move("c", -2, listOf("a", "b", "c"))
+        prefs.saveOrder(listOf("c", "a", "b"))
         assertEquals(listOf("c", "a", "d"), prefs.ordered(listOf("a", "c", "d")))
         prefs.setHidden("a", true)
         prefs.sortAlphabetically()
         assertEquals(listOf("a", "c", "d"), prefs.ordered(listOf("a", "c", "d")))
         assertTrue(prefs.isHidden("a"))
-        prefs.move("a", -1, listOf("a", "c", "d"))
         assertEquals(listOf("a", "c", "d"), prefs.ordered(listOf("a", "c", "d")))
     }
 

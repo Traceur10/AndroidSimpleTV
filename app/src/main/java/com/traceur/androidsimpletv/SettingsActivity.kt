@@ -12,6 +12,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Switch
 import java.util.concurrent.Executors
 
 class SettingsActivity : Activity() {
@@ -25,6 +26,7 @@ class SettingsActivity : Activity() {
     private var generation = 0
     private var active = false
     private var pending: java.util.concurrent.Future<*>? = null
+    private var dockDialog: AlertDialog? = null
     private var apps = emptyList<AppEntry>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,11 +45,30 @@ class SettingsActivity : Activity() {
             setOnClickListener { action() }
             column.addView(this, LinearLayout.LayoutParams(-1, -2))
         }
-        button(getString(R.string.manage_apps)) { showAppManager() }
+        button(getString(R.string.move_apps)) {
+            if (apps.isEmpty()) status.setText(R.string.apps_loading)
+            else dockDialog = DockSettingsDialogs.reorder(this, apps, preferences)
+        }
+        button(getString(R.string.show_hide_apps)) {
+            if (apps.isEmpty()) status.setText(R.string.apps_loading)
+            else dockDialog = DockSettingsDialogs.visibility(this, apps, preferences)
+        }
         button(getString(R.string.sort_apps)) {
             preferences.sortAlphabetically()
             status.setText(R.string.sorted_apps)
         }
+        column.addView(Switch(this).apply {
+            text = getString(R.string.keep_slideshow_awake)
+            textSize = 18f
+            setPadding(16, 20, 16, 20)
+            isChecked = preferences.keepSlideshowAwake
+            setOnCheckedChangeListener { _, checked -> preferences.keepSlideshowAwake = checked }
+        }, LinearLayout.LayoutParams(-1, -2))
+        column.addView(TextView(this).apply {
+            text = getString(R.string.keep_slideshow_awake_help)
+            textSize = 14f
+            setPadding(16, 0, 16, 16)
+        })
         locationButton = button("") { searchLocation() }
         unitsButton = button("") {
             preferences.fahrenheit = !preferences.fahrenheit
@@ -83,6 +104,8 @@ class SettingsActivity : Activity() {
 
     override fun onPause() {
         active = false
+        dockDialog?.dismiss()
+        dockDialog = null
         generation++
         pending?.cancel(true)
         client.cancel()
@@ -98,31 +121,6 @@ class SettingsActivity : Activity() {
     private fun updateLabels() {
         locationButton.text = getString(R.string.weather_location, preferences.location?.name ?: getString(R.string.not_set))
         unitsButton.text = getString(R.string.temperature_units, if (preferences.fahrenheit) "°F" else "°C")
-    }
-
-    private fun showAppManager(selected: String? = null) {
-        if (apps.isEmpty()) { status.setText(R.string.apps_loading); return }
-        val byId = apps.associateBy { it.component.flattenToString() }
-        val ids = preferences.ordered(apps.map { it.component.flattenToString() })
-        val labels = ids.map { id -> getString(if (preferences.isHidden(id)) R.string.app_hidden else R.string.app_shown, byId.getValue(id).label) }.toTypedArray()
-        val dialog = AlertDialog.Builder(this).setTitle(R.string.manage_apps)
-            .setItems(labels) { _, index -> appOptions(ids[index], byId.getValue(ids[index]).label) }
-            .setNegativeButton(R.string.done, null).create()
-        dialog.setOnShowListener { dialog.listView.setSelection(ids.indexOf(selected).coerceAtLeast(0)) }
-        dialog.show()
-    }
-
-    private fun appOptions(id: String, name: String) {
-        val options = arrayOf(getString(if (preferences.isHidden(id)) R.string.show_app else R.string.hide_app),
-            getString(R.string.move_earlier), getString(R.string.move_later))
-        AlertDialog.Builder(this).setTitle(name).setItems(options) { _, action ->
-            when (action) {
-                0 -> preferences.setHidden(id, !preferences.isHidden(id))
-                1 -> preferences.move(id, -1, apps.map { it.component.flattenToString() })
-                2 -> preferences.move(id, 1, apps.map { it.component.flattenToString() })
-            }
-            showAppManager(id)
-        }.setNegativeButton(R.string.cancel) { _, _ -> showAppManager(id) }.show()
     }
 
     private fun searchLocation() {

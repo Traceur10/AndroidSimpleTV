@@ -7,6 +7,9 @@ import org.json.JSONObject
 /** Device-local settings. Component names survive label changes and duplicate app names. */
 internal class LauncherPreferences(context: Context) {
     private val prefs = context.getSharedPreferences("launcher", Context.MODE_PRIVATE)
+    var keepSlideshowAwake: Boolean
+        get() = prefs.getBoolean("keepSlideshowAwake", false)
+        set(value) { prefs.edit().putBoolean("keepSlideshowAwake", value).apply() }
     var fahrenheit: Boolean
         get() = prefs.getBoolean("fahrenheit", true)
         set(value) { prefs.edit().putBoolean("fahrenheit", value).apply() }
@@ -40,15 +43,7 @@ internal class LauncherPreferences(context: Context) {
         // Missing/uninstalled apps are omitted; newly installed apps append alphabetically.
         return (stored.filter { it in available } + available).distinct()
     }
-    fun move(component: String, delta: Int, available: List<String>) {
-        val order = ordered(available).toMutableList()
-        val from = order.indexOf(component)
-        if (from < 0) return
-        val to = (from + delta).coerceIn(0, order.lastIndex)
-        order.removeAt(from)
-        order.add(to, component)
-        prefs.edit().putString("order", JSONArray(order).toString()).apply()
-    }
+    fun saveOrder(order: List<String>) { prefs.edit().putString("order", JSONArray(order.distinct()).toString()).apply() }
     fun sortAlphabetically() { prefs.edit().remove("order").apply() }
 }
 

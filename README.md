@@ -8,7 +8,7 @@ A quiet, native Kotlin Android TV launcher: fullscreen bundled landscapes, a clo
 - Each wallpaper is static for **55 seconds**, followed by a **5-second crossfade**. No pan/zoom or continuous redraw during the static interval.
 - Slideshow and clock callbacks stop in `onPause`. Returning resumes the same wallpaper/fade position; background time is excluded. Activity recreation also restores progress and dock selection.
 - Clock honors the device's locale and 12/24-hour preference; date uses the locale's ordering.
-- Saved dock customization: show/hide apps, move earlier/later, or reset order A–Z. Settings always remains accessible, even with all apps hidden.
+- Saved dock customization: a checkbox list for visibility, remote pick-up/reposition/place ordering, or reset order A–Z. Settings always remains accessible, even with all apps hidden.
 - Optional city/postal-code weather search, confirmed location selection, Fahrenheit by default with a Celsius toggle. Current temperature refreshes every 30 minutes while foregrounded. Cached readings are marked when stale, and unavailable weather does not block the launcher.
 - A horizontally scrolling dock discovers TV-launchable activities, with icons, labels, visible focus, and remembered selection. It refreshes when the launcher resumes. Phone-only apps are intentionally excluded.
 - Separate `LEANBACK_LAUNCHER` and `HOME`/`DEFAULT` intent filters, a TV banner/icon, landscape display, and no touchscreen requirement.
@@ -29,7 +29,11 @@ The dock stays visible until hidden or another app opens. Home behavior is contr
 
 ## Customize the dock and weather
 
-Open the permanent **Settings** dock tile, or press Menu in the launcher. Under **Manage dock apps**, choose an app, then Show/Hide or Move earlier/later. The manager includes hidden apps so they can be restored. Moves apply to that complete list. **Sort apps A–Z** resets ordering but preserves visibility choices. New apps append alphabetically after the saved order. Nothing is uninstalled or disabled.
+Open the permanent **Settings** dock tile, or press Menu in the launcher.
+
+- **Show/hide apps** opens one checkbox list. Checked means shown. Toggle several apps with OK without leaving the list; changes save immediately. Hidden apps remain listed so you can restore them.
+- **Move apps** opens the complete ordered list, including hidden apps marked as hidden. Use Up/Down to select an app, **OK to pick it up**, Up/Down to reposition it, then **OK to place and save**. Back cancels an unfinished move without closing the list; another Back closes it. Leaving Settings also cancels any unplaced move. Placed moves remain saved.
+- **Sort apps A–Z** resets ordering but preserves visibility choices. New apps append alphabetically after the saved order. Nothing is uninstalled or disabled.
 
 Select **Weather location**, enter a city or postal code, then confirm a matching result. A new install has no preset location and sends no weather request until configured. Search text and selected city coordinates go to Open-Meteo; no GPS/device location permission is requested. Postal codes may resolve to city-level coordinates. **Temperature** toggles °F/°C; **Turn weather off** removes the saved location and cached reading. Preferences stay on this device and survive app updates.
 
@@ -37,7 +41,13 @@ Weather uses the [Open-Meteo API](https://open-meteo.com/en/docs) and [geocoding
 
 ## Idle screensaver versus Home
 
-Selecting this app as the default Home launcher would not select it as the TV's screensaver. Android runs screensavers as a separate [DreamService](https://developer.android.com/reference/android/service/dreams/DreamService); [Google TV Ambient mode](https://support.google.com/googletv/answer/10070821?hl=en) has its own settings. This version does not implement a screensaver, change Sony Ambient mode, prevent idle sleep, or change the default launcher. A shared-wallpaper screensaver is future work, subject to the TV firmware allowing selection. True standby keeps the screen off.
+Selecting this app as the default Home launcher would not select it as the TV's screensaver. Android runs screensavers as a separate [DreamService](https://developer.android.com/reference/android/service/dreams/DreamService); [Google TV Ambient mode](https://support.google.com/googletv/answer/10070821?hl=en) has its own settings. This version does not implement a screensaver, change Sony Ambient mode settings, or change the default launcher. A shared-wallpaper screensaver is future work, subject to the TV firmware allowing selection. True standby keeps the screen off.
+
+### Keep the slideshow awake
+
+Settings includes **Keep slideshow awake**, off by default. When enabled, the visible launcher sets Android's `FLAG_KEEP_SCREEN_ON`, the supported mechanism used for apps that need the display to remain on. Android documents it as preventing TV Ambient mode for a foreground activity; fullscreen layout alone does not do that. No fake video, simulated keypresses, wake-lock permission, or system timeout changes are involved. See [Android screen-on guidance](https://developer.android.com/develop/background-work/background-tasks/awake/screen-on).
+
+The flag is explicitly cleared when the launcher pauses, including when opening Settings or another app, and restored on return only if enabled. The remote Power button and separate TV power policies are not overridden. This prevents idle Ambient mode while this app is visible; it does not replace the screensaver used elsewhere. Disable the switch to allow normal idle behavior again.
 
 ## Build
 
@@ -75,7 +85,7 @@ Manual checks:
 2. Press OK once: the dock opens without launching an app. Navigate left/right to both ends; verify focus and scrolling. Press Back: only the dock hides.
 3. Reveal the dock and launch a TV app. Press Home: the stock launcher should appear. Open AndroidSimpleTV again from its app tile (or the explicit activity command below).
 4. Observe 55 seconds of stillness then a five-second crossfade. Leave midway through a fade, wait, and reopen: it should resume the frozen position.
-5. Press Home and verify Google TV remains the default. Check sleep/wake with the physical remote. This app deliberately does not keep the screen awake.
+5. Press Home and verify Google TV remains the default. Check sleep/wake with the physical remote. With Keep slideshow awake off, normal idle behavior should remain. With it on, leave the launcher visible beyond the configured idle interval, then verify that leaving the launcher releases the screen-on request.
 
 ```sh
 adb -s YOUR_TV_SERIAL shell am start -W -n com.traceur.androidsimpletv/.MainActivity

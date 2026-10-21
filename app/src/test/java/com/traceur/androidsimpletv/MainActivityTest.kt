@@ -20,6 +20,23 @@ class MainActivityTest {
         activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
     }
 
+    @Test fun `keep awake is opt in and released on pause`() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get()
+        val flag = android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        assertEquals(0, activity.window.attributes.flags and flag)
+        controller.pause()
+        LauncherPreferences(activity).keepSlideshowAwake = true
+        controller.resume()
+        assertEquals(flag, activity.window.attributes.flags and flag)
+        controller.pause()
+        assertEquals(0, activity.window.attributes.flags and flag)
+        LauncherPreferences(activity).keepSlideshowAwake = false
+        controller.resume()
+        assertEquals(0, activity.window.attributes.flags and flag)
+        controller.pause().stop().destroy()
+    }
+
     @Test fun `remote reveals and hides dock without exiting`() {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         val activity = controller.get()
@@ -55,8 +72,10 @@ class MainActivityTest {
         val frozen = controller.get().timeline.elapsedMs
         val state = android.os.Bundle()
         controller.saveInstanceState(state).stop().destroy()
-        val restored = Robolectric.buildActivity(MainActivity::class.java).create(state).start().restoreInstanceState(state).resume().visible()
+        val restored = Robolectric.buildActivity(MainActivity::class.java).create(state).start().restoreInstanceState(state)
         assertEquals(frozen, restored.get().timeline.elapsedMs)
+        // Once resumed, rendering may legitimately advance foreground time.
+        restored.resume().visible()
         assertEquals(View.VISIBLE, restored.get().window.decorView.findViewWithTag<View>("app_dock").visibility)
         restored.pause().stop().destroy()
     }

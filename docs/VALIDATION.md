@@ -1,5 +1,15 @@
 # Validation — 2026-10-20
 
+## v0.3: remote-friendly dock settings and foreground keep-awake
+
+- `testDebugUnitTest lintDebug assembleDebug`: **BUILD SUCCESSFUL; 17 tests passed; 0 lint errors, 8 warnings**.
+- Tests cover repeated moves and boundaries, cancel versus placement, multi-toggle visibility without closing the dialog, and the screen-on flag being set only when enabled and cleared on pause.
+- Installed v0.3 on the Sony BRAVIA API 31. ADB-injected remote events verified pick-up, several moves, Back cancellation without closing, and OK placement. Visibility toggles were exercised in the same open list. Screenshots were inspected.
+- User visibility, ordering and location preferences were preserved after testing. Keep slideshow awake was enabled on this TV; it remains off by default for new installs.
+- Android window diagnostics confirmed KEEP_SCREEN_ON and the launcher as the held-screen window in the foreground. Opening Settings cleared the held-screen window; stock Home also had no launcher hold. Returned the TV to stock Home, whose resolver is unchanged.
+- A full ten-minute idle soak and physical Power-button/sleep-timer behavior have **not** been tested. The option uses Android's supported foreground screen-on flag, not system timeout changes. Sony may have separate power policies.
+- No TV system packages, screensaver configuration, default launcher, or system idle settings were changed. Reddit photos and a dedicated DreamService remain outside this revision.
+
 ## v0.2: dock customization and weather
 
 - `testDebugUnitTest lintDebug assembleDebug`: BUILD SUCCESSFUL. **12 tests passed**, with **0 lint errors and 8 warnings** (the original seven plus fixed landscape orientation for Settings).
