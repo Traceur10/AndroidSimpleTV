@@ -96,23 +96,23 @@ internal class PublicWallpaperClient {
     fun cancel() { connection?.disconnect() }
     fun photos(config: WallpaperConfig, now: Long = System.currentTimeMillis()): List<WallpaperPhoto> {
         remaining = TRANSFER_LIMIT; requests = 0
-        val slot = ((now / 3_600_000L) % 4).toInt().coerceAtLeast(0)
+        val slot = ((now / 1_800_000L) % 4).toInt().coerceAtLeast(0)
         val lists = config.sources.sortedBy { it.name }.map { source ->
             try {
                 when (source) {
                     WallpaperSource.COMMONS -> {
                         val query = listOf("mountain landscape", "forest landscape", "ocean coastline", "desert landscape")[slot]
                         val args = linkedMapOf("action" to "query", "format" to "json", "formatversion" to "2", "generator" to "search",
-                            "gsrsearch" to "filetype:bitmap $query", "gsrnamespace" to "6", "gsrlimit" to "20", "prop" to "imageinfo",
+                            "gsrsearch" to "filetype:bitmap $query", "gsrnamespace" to "6", "gsrlimit" to "50", "gsroffset" to (((now / 1_800_000L / 4) % 10) * 50).toString(), "prop" to "imageinfo",
                             "iiprop" to "url|size|mime|extmetadata", "iiurlwidth" to "1920", "uselang" to "en",
                             "iiextmetadatafilter" to "Artist|Credit|LicenseShortName|LicenseUrl|Copyrighted|AttributionRequired")
                         PublicListings.commons(String(request("https://commons.wikimedia.org/w/api.php?" + args.entries.joinToString("&") { "${it.key}=${URLEncoder.encode(it.value, "UTF-8")}" }, JSON_LIMIT), Charsets.UTF_8))
                     }
                     WallpaperSource.NASA -> {
                         val query = listOf("nebula", "earth from space", "galaxy", "saturn")[slot]
-                        PublicListings.nasa(String(request("https://images-api.nasa.gov/search?media_type=image&page_size=20&q=" + URLEncoder.encode(query, "UTF-8"), JSON_LIMIT), Charsets.UTF_8))
+                        PublicListings.nasa(String(request("https://images-api.nasa.gov/search?media_type=image&page_size=50&page=${((now / 1_800_000L / 4) % 10) + 1}&q=" + URLEncoder.encode(query, "UTF-8"), JSON_LIMIT), Charsets.UTF_8))
                     }
-                }.shuffled(java.util.Random(now / 3_600_000L))
+                }.shuffled(java.util.Random(now / 1_800_000L))
             } catch (e: java.io.InterruptedIOException) { throw e }
             catch (e: WallpaperHttpException) { if (e.code == 429) throw e else emptyList() }
             catch (_: IOException) { emptyList() }
@@ -125,12 +125,12 @@ internal class PublicWallpaperClient {
 
     private fun request(url: String, limit: Int): ByteArray {
         checkInterrupted()
-        if (++requests > 10 || remaining <= 0) throw IOException("Refresh budget reached")
+        if (++requests > 32 || remaining <= 0) throw IOException("Refresh budget reached")
         val c = URL(url).openConnection() as HttpURLConnection
         connection = c
         try {
             c.connectTimeout = 10_000; c.readTimeout = 15_000; c.instanceFollowRedirects = false
-            c.setRequestProperty("User-Agent", "AndroidSimpleTV/0.5.0 (https://github.com/Traceur10/AndroidSimpleTV)")
+            c.setRequestProperty("User-Agent", "AndroidSimpleTV/0.6.0 (https://github.com/Traceur10/AndroidSimpleTV)")
             c.setRequestProperty("Accept-Encoding", "identity")
             if (c.responseCode != 200) throw WallpaperHttpException(c.responseCode,
                 (c.getHeaderField("Retry-After")?.toLongOrNull() ?: 3600L).coerceIn(3600L, 86400L) * 1000)
@@ -150,6 +150,6 @@ internal class PublicWallpaperClient {
             }
         } finally { c.disconnect(); if (connection === c) connection = null }
     }
-    companion object { const val IMAGE_LIMIT = 3 * 1024 * 1024; const val JSON_LIMIT = 1024 * 1024; const val TRANSFER_LIMIT = 16 * 1024 * 1024 }
+    companion object { const val IMAGE_LIMIT = 3 * 1024 * 1024; const val JSON_LIMIT = 1024 * 1024; const val TRANSFER_LIMIT = 48 * 1024 * 1024 }
 }
 internal fun checkInterrupted() { if (Thread.currentThread().isInterrupted) throw java.io.InterruptedIOException() }

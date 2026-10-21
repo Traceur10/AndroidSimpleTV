@@ -20,6 +20,38 @@ class MainActivityTest {
         activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
     }
 
+    @Test fun `dock hides after ten seconds and remote input restarts timeout`() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get()
+        val dock = activity.window.decorView.findViewWithTag<View>("app_dock")
+        key(activity, KeyEvent.KEYCODE_DPAD_CENTER)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(9))
+        assertEquals(View.VISIBLE, dock.visibility)
+        key(activity, KeyEvent.KEYCODE_DPAD_RIGHT)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(9))
+        assertEquals(View.VISIBLE, dock.visibility)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
+        assertEquals(View.GONE, dock.visibility)
+        assertFalse(activity.isFinishing)
+        key(activity, KeyEvent.KEYCODE_DPAD_CENTER)
+        assertEquals(View.VISIBLE, dock.visibility)
+        controller.pause().stop().destroy()
+    }
+
+    @Test fun `dock timeout is cancelled in background and rearmed on return`() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get()
+        val dock = activity.window.decorView.findViewWithTag<View>("app_dock")
+        key(activity, KeyEvent.KEYCODE_DPAD_CENTER)
+        controller.pause()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(30))
+        assertEquals(View.VISIBLE, dock.visibility)
+        controller.resume()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10))
+        assertEquals(View.GONE, dock.visibility)
+        controller.pause().stop().destroy()
+    }
+
     @Test fun `keep awake is opt in and released on pause`() {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         val activity = controller.get()
@@ -68,6 +100,7 @@ class MainActivityTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         key(controller.get(), KeyEvent.KEYCODE_DPAD_DOWN)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(56))
+        key(controller.get(), KeyEvent.KEYCODE_DPAD_DOWN)
         controller.pause()
         val frozen = controller.get().timeline.elapsedMs
         val state = android.os.Bundle()
@@ -83,11 +116,11 @@ class MainActivityTest {
     @Test fun `background time does not advance slideshow and resume preserves fade`() {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         val activity = controller.get()
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(57_500))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(117_500))
         controller.pause()
         val frozen = activity.timeline.elapsedMs
         // Activity setup may consume a few milliseconds before the explicit idle.
-        assertTrue(frozen in 57_500L..57_516L)
+        assertTrue(frozen in 117_500L..117_516L)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(10))
         assertEquals(frozen, activity.timeline.elapsedMs)
         controller.resume()

@@ -49,7 +49,7 @@ class PublicWallpapersTest {
         assertTrue(PublicListings.imageAllowed("https://thumb.wikimedia.org/a.jpg"))
         assertTrue(PublicListings.imageAllowed("https://images-assets.nasa.gov/a.jpg"))
     }
-    @Test fun `hourly lease survives recreation failures source changes and clock rollback`() {
+    @Test fun `half-hour lease survives recreation failures source changes and clock rollback`() {
         val context = RuntimeEnvironment.getApplication()
         val prefs = LauncherPreferences(context)
         assertTrue(prefs.claimWallpaperRefresh(1000))

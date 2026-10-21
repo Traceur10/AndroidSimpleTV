@@ -23,7 +23,11 @@ internal class LauncherPreferences(context: Context) {
         if (now < wallpaperRetryAt) return@synchronized false
         prefs.edit().putLong("wallpaperRetryAt", now + WALLPAPER_INTERVAL_MS).commit()
     }
-    companion object { const val WALLPAPER_INTERVAL_MS = 3_600_000L; private val refreshLock = Any() }
+    companion object { const val WALLPAPER_INTERVAL_MS = 1_800_000L; private val refreshLock = Any() }
+    fun saveWallpaperPosition(key: String, elapsed: Long) {
+        prefs.edit().putString("wallpaperPositionKey", key).putLong("wallpaperPositionMs", elapsed).apply()
+    }
+    fun wallpaperPosition(key: String): Long = if (prefs.getString("wallpaperPositionKey", null) == key) prefs.getLong("wallpaperPositionMs", 0) else 0
     var keepSlideshowAwake: Boolean
         get() = prefs.getBoolean("keepSlideshowAwake", false)
         set(value) { prefs.edit().putBoolean("keepSlideshowAwake", value).apply() }

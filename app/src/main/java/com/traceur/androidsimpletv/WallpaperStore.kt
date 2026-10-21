@@ -32,7 +32,7 @@ internal class WallpaperStore(context: Context) {
         album.takeIf { it.source == source }
     }
     private fun readManifest(): WallpaperAlbum? = runCatching {
-        if (!manifest.exists() || manifest.length() > 64 * 1024) return null
+        if (!manifest.exists() || manifest.length() > 512 * 1024) return null
         val o = JSONObject(manifest.readText())
         val a = o.getJSONArray("photos")
         require(a.length() in 1..MAX_PHOTOS)
@@ -54,36 +54,28 @@ internal class WallpaperStore(context: Context) {
 
     fun clear() = synchronized(lock) { root.deleteRecursively(); Unit }
 
-    fun refresh(config: WallpaperConfig, client: PublicWallpaperClient): WallpaperAlbum {
-        val old = read(config.sourceKey)?.photos?.map { it.id }?.toSet().orEmpty()
-        val candidates = client.photos(config)
-        return replace(config.sourceKey, candidates.filter { it.id !in old } + candidates.filter { it.id in old }, client::image)
-    }
+    fun refresh(config: WallpaperConfig, client: PublicWallpaperClient): WallpaperAlbum =
+        replace(config.sourceKey, client.photos(config), client::image)
+
+    private fun recentIds(): List<String> = runCatching {
+        val array = JSONObject(manifest.readText()).optJSONArray("history") ?: JSONArray()
+        (0 until array.length()).map { array.getString(it) }.filter { Regex("[a-z0-9]{1,32}").matches(it) }.takeLast(HISTORY_LIMIT)
+    }.getOrDefault(emptyList())
 
     internal fun replace(source: String, candidates: List<WallpaperPhoto>, download: (WallpaperPhoto) -> ByteArray): WallpaperAlbum = synchronized(lock) {
         checkInterrupted()
         read(source) // Purge old Reddit data, incomplete writes and invalid cache before staging.
         root.mkdirs()
         if (root.usableSpace < MAX_DISK_BYTES + 3L * 1024 * 1024) throw IOException("Not enough free TV storage")
-        val previous = readManifest()?.photos?.associateBy { it.id }.orEmpty()
+        val history = (recentIds() + readManifest()?.photos.orEmpty().map { it.id }).distinct().takeLast(HISTORY_LIMIT)
+        val excluded = history.toSet()
         val staging = File(root, "pending").apply { deleteRecursively(); mkdirs() }
         try {
             val accepted = mutableListOf<WallpaperPhoto>()
-            for (photo in candidates.distinctBy { it.id }.take(8)) {
+            for (photo in candidates.distinctBy { it.id }.filterNot { it.id in excluded }.take(30)) {
                 checkInterrupted()
                 if (accepted.size == MAX_PHOTOS) break
                 try {
-                    val existing = File(root, "${photo.id}.jpg")
-                    if (previous[photo.id]?.imageUrl == photo.imageUrl && existing.length() in 1..MAX_FILE_BYTES) {
-                        val bytes = existing.readBytes()
-                        val checked = decode(bytes)
-                        if (checked != null) {
-                            checked.recycle()
-                            File(staging, "${photo.id}.jpg").writeBytes(bytes)
-                            accepted.add(photo)
-                            continue
-                        }
-                    }
                     val bitmap = decode(download(photo)) ?: continue
                     try {
                         var encoded: ByteArray? = null
@@ -94,7 +86,7 @@ internal class WallpaperStore(context: Context) {
                         }
                         if (encoded != null) {
                             val used = root.walkTopDown().filter { it.isFile }.sumOf { it.length() }
-                            if (used + encoded.size + 64 * 1024 > MAX_DISK_BYTES) throw IOException("Wallpaper cache is full")
+                            if (used + encoded.size + 512 * 1024 > MAX_DISK_BYTES) throw IOException("Wallpaper cache is full")
                             File(staging, "${photo.id}.jpg").writeBytes(encoded)
                             accepted.add(photo)
                         }
@@ -118,6 +110,7 @@ internal class WallpaperStore(context: Context) {
             try {
                 val json = JSONObject().put("source", source).put("fetched", album.fetched)
                     .put("photos", JSONArray(accepted.map { it.json() }))
+                    .put("history", JSONArray((history + accepted.map { it.id }).distinct().takeLast(HISTORY_LIMIT)))
                 stream.write(json.toString().toByteArray(Charsets.UTF_8)); atomic.finishWrite(stream)
             } catch (e: Exception) { atomic.failWrite(stream); throw e }
             val keep = accepted.map { "${it.id}.jpg" }.toSet() + "album.json"
@@ -132,9 +125,10 @@ internal class WallpaperStore(context: Context) {
 
     companion object {
         private val lock = Any()
-        const val MAX_PHOTOS = 4
+        const val HISTORY_LIMIT = 10_000
+        const val MAX_PHOTOS = 15
         const val MAX_FILE_BYTES = 512L * 1024
-        const val MAX_DISK_BYTES = 5L * 1024 * 1024
+        const val MAX_DISK_BYTES = 20L * 1024 * 1024
         internal fun decode(bytes: ByteArray): Bitmap? {
             if (bytes.size > PublicWallpaperClient.IMAGE_LIMIT) return null
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }

@@ -42,11 +42,11 @@
     <string name="wallpapers_title">Wallpapers</string>
     <string name="public_enable">Use online wallpapers</string>
     <string name="public_off">Online wallpapers are off. Downloads stopped.</string>
-    <string name="public_intro">Refresh at most once an hour while the launcher is visible. Four photos, about 2 MB saved, at most 5 MB during updates. The slideshow reuses these photos between refreshes.</string>
+    <string name="public_intro">Up to 15 new photos every 30 minutes while the launcher is visible. Each photo lasts two minutes. About 7.5 MB saved; at most 20 MB during updates. If new photos are unavailable, the last one stays on screen.</string>
     <string name="public_sources">Sources: %1$s</string>
     <string name="public_choose_sources">Wallpaper sources</string>
     <string name="public_need_source">Choose at least one source.</string>
-    <string name="public_source_saved">Sources saved. They take effect at the next allowed refresh.</string>
+    <string name="public_source_saved">Sources saved. They take effect at the next allowed refresh. Recently downloaded photos are skipped.</string>
     <string name="public_save">Save</string>
     <string name="public_refresh">Refresh photos</string>
     <string name="public_preview">Preview downloaded photos</string>
@@ -63,5 +63,5 @@
     <string name="public_no_browser">No browser is installed to open the source page.</string>
     <string name="public_wait">Next refresh allowed at %1$s. Saved photos remain available.</string>
     <string name="public_failed">Could not update photos. Saved photos remain available; bundled landscapes are used if needed. Check your connection and available TV storage.</string>
-    <string name="public_privacy">Wikimedia Commons supplies nature scenes; NASA supplies space images. No account or API key is needed. Requests go only to the selected providers. Downloads stop when you leave the launcher or this screen. Photos are resized to at most 1080p and old collections are replaced. Credits and license details are available in previews.</string>
+    <string name="public_privacy">Wikimedia Commons supplies nature scenes; NASA supplies space images. No account or API key is needed. Requests go only to the selected providers. Downloads stop when you leave the launcher or this screen. Photos are resized to at most 1080p and old collections are replaced. Credits and license details are available in previews. The last 10,000 photo IDs are remembered to avoid repeats; clearing photos also clears this history.</string>
 </resources>

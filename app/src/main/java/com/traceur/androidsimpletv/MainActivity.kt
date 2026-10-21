@@ -52,6 +52,14 @@ class MainActivity : Activity() {
     private var lastTick = 0L
     private var renderedIndex = -1
     private var selectedComponent: String? = null
+    private val dockIdleTimeout = Runnable { if (resumed && dock.visibility == View.VISIBLE) hideDock() }
+    private fun resetDockIdleTimeout() {
+        handler.removeCallbacks(dockIdleTimeout)
+        if (resumed && dock.visibility == View.VISIBLE) handler.postDelayed(dockIdleTimeout, 10_000L)
+    }
+    private fun saveWallpaperPosition() {
+        loadedAlbum?.album?.let { preferences.saveWallpaperPosition("${it.source}:${it.fetched}", timeline.elapsedMs) }
+    }
     private lateinit var root: FrameLayout
     private lateinit var baseImage: ImageView
     private lateinit var nextImage: ImageView
@@ -117,10 +125,13 @@ class MainActivity : Activity() {
         loadApps()
         refreshWeather()
         loadWallpapers()
+        resetDockIdleTimeout()
     }
 
     override fun onPause() {
         advanceTimeline()
+        saveWallpaperPosition()
+        handler.removeCallbacks(dockIdleTimeout)
         resumed = false
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         consumedKey = null
@@ -166,6 +177,7 @@ class MainActivity : Activity() {
     private fun renderWallpaper() {
         if (renderedIndex != timeline.imageIndex) {
             renderedIndex = timeline.imageIndex
+            saveWallpaperPosition()
             val photos = loadedAlbum?.images
             if (photos.isNullOrEmpty()) {
                 baseImage.setImageResource(wallpapers[timeline.imageIndex])
@@ -218,7 +230,9 @@ class MainActivity : Activity() {
         if (loadedAlbum === album) return
         loadedAlbum = album
         val key = album?.album?.let { "${it.source}:${it.fetched}" }
-        timeline = SlideshowTimeline(album?.images?.size ?: wallpapers.size, if (key != null && key == restoredAlbumKey) restoredElapsed else 0L)
+        timeline = SlideshowTimeline(album?.images?.size ?: wallpapers.size,
+            if (key != null && key == restoredAlbumKey) restoredElapsed else key?.let { preferences.wallpaperPosition(it) } ?: 0L,
+            loop = album == null)
         restoredAlbumKey = null
         lastTick = SystemClock.elapsedRealtime()
         renderedIndex = -1
@@ -378,9 +392,11 @@ class MainActivity : Activity() {
         dock.visibility = View.VISIBLE
         hint.visibility = View.GONE
         focusSelectedApp()
+        resetDockIdleTimeout()
     }
 
     private fun hideDock() {
+        handler.removeCallbacks(dockIdleTimeout)
         dock.visibility = View.GONE
         hint.visibility = View.VISIBLE
         root.requestFocus()
@@ -391,6 +407,8 @@ class MainActivity : Activity() {
     private var consumedKey: Int? = null
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Every key event, including repeat/down/up, counts as activity while the dock is open.
+        resetDockIdleTimeout()
         if (event.keyCode == consumedKey) {
             if (event.action == KeyEvent.ACTION_UP) consumedKey = null
             return true

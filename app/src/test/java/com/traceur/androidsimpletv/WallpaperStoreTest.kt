@@ -26,11 +26,11 @@ class WallpaperStoreTest {
     @Test fun `cache persists offline with bounded size and source isolation`() {
         val store = WallpaperStore(context); store.clear()
         val bytes = image()
-        val saved = store.replace("COMMONS", (1..10).map { photo("abc$it") }) { bytes }
-        assertEquals(4, saved.photos.size)
+        val saved = store.replace("COMMONS", (1..20).map { photo("abc$it") }) { bytes }
+        assertEquals(15, saved.photos.size)
         assertNull(store.load("different"))
         val loaded = WallpaperStore(context).load("COMMONS")!!
-        assertEquals(4, loaded.images.size)
+        assertEquals(15, loaded.images.size)
         assertEquals(1280, loaded.images.first().bitmap.width)
         assertTrue(java.io.File(context.filesDir, "public-wallpapers").walkTopDown().filter { it.isFile }.sumOf { it.length() } <= WallpaperStore.MAX_DISK_BYTES)
         store.clear(); assertNull(store.read("COMMONS"))
@@ -56,24 +56,41 @@ class WallpaperStoreTest {
     @Test fun `refresh staging stays below disk cap and oversize existing files are purged`() {
         val store = WallpaperStore(context); store.clear()
         val bytes = image()
-        store.replace("COMMONS", (1..4).map { photo("old$it") }) { bytes }
+        store.replace("COMMONS", (1..15).map { photo("old$it") }) { bytes }
         val root = java.io.File(context.filesDir, "public-wallpapers")
-        store.replace("COMMONS", (1..4).map { photo("new$it") }) {
+        store.replace("COMMONS", (1..15).map { photo("new$it") }) {
             assertTrue(root.walkTopDown().filter { it.isFile }.sumOf { it.length() } <= WallpaperStore.MAX_DISK_BYTES)
             bytes
         }
         assertTrue(root.listFiles()!!.filter { it.extension == "jpg" }.all { it.length() <= WallpaperStore.MAX_FILE_BYTES })
-        assertEquals(4, root.listFiles()!!.count { it.extension == "jpg" })
+        assertEquals(15, root.listFiles()!!.count { it.extension == "jpg" })
         java.io.File(root, "new1.jpg").writeBytes(ByteArray(WallpaperStore.MAX_FILE_BYTES.toInt() + 1))
         assertNull(store.read("COMMONS"))
     }
-    @Test fun `unchanged photos are reused without downloading or recompressing`() {
+    @Test fun `recent photos are skipped across store recreation and failed refresh preserves history`() {
         val store = WallpaperStore(context); store.clear()
-        store.replace("COMMONS", listOf(photo("same1"))) { image() }
-        val file = java.io.File(context.filesDir, "public-wallpapers/same1.jpg")
-        val original = file.readBytes()
-        store.replace("COMMONS", listOf(photo("same1"))) { error("Unexpected image download") }
-        assertArrayEquals(original, file.readBytes())
+        store.replace("COMMONS", listOf(photo("old1"))) { image() }
+        val loadedIds = mutableListOf<String>()
+        WallpaperStore(context).replace("COMMONS", listOf(photo("old1"), photo("new1"))) { loadedIds.add(it.id); image() }
+        assertEquals(listOf("new1"), loadedIds)
+        assertTrue(runCatching { store.replace("COMMONS", listOf(photo("old1"), photo("new1"))) { error("Repeated photo download") } }.isFailure)
+        assertEquals("new1", store.read("COMMONS")!!.photos.single().id)
+        store.clear()
+        store.replace("COMMONS", listOf(photo("old1"))) { image() }
+        assertEquals("old1", store.read("COMMONS")!!.photos.single().id)
+    }
+    @Test fun `history remains bounded while retaining the newest photo IDs`() {
+        val store = WallpaperStore(context); store.clear()
+        store.replace("COMMONS", listOf(photo("start1"))) { image() }
+        val manifest = java.io.File(context.filesDir, "public-wallpapers/album.json")
+        val json = org.json.JSONObject(manifest.readText()).put("history", org.json.JSONArray((1..WallpaperStore.HISTORY_LIMIT).map { "old$it" }))
+        manifest.writeText(json.toString())
+        store.replace("COMMONS", listOf(photo("latest1"))) { image() }
+        val history = org.json.JSONObject(manifest.readText()).getJSONArray("history")
+        assertEquals(WallpaperStore.HISTORY_LIMIT, history.length())
+        assertEquals("latest1", history.getString(history.length() - 1))
+        assertNotEquals("old1", history.getString(0))
+        assertTrue(manifest.length() < 512 * 1024)
     }
     @Test fun `interrupted refresh cannot publish changes`() {
         val store = WallpaperStore(context); store.clear()

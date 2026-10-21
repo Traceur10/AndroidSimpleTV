@@ -5,7 +5,7 @@ A quiet, native Kotlin Android TV launcher: fullscreen bundled landscapes, a clo
 ## What works
 
 - Three original bundled vector landscapes (alpine lake, dunes, coast), scaled to fill the screen without letterboxing. Bundled wallpapers remain offline. Optional Commons/NASA wallpaper refresh and weather use internet access; no storage or device-location permissions.
-- Each wallpaper is static for **55 seconds**, followed by a **5-second crossfade**. No pan/zoom or continuous redraw during the static interval.
+- Each wallpaper is static for **115 seconds**, followed by a **5-second crossfade**. No pan/zoom or continuous redraw during the static interval.
 - Slideshow and clock callbacks stop in `onPause`. Returning resumes the same wallpaper/fade position; background time is excluded. Activity recreation also restores progress and dock selection.
 - Clock honors the device's locale and 12/24-hour preference; date uses the locale's ordering.
 - Saved dock customization: a checkbox list for visibility, remote pick-up/reposition/place ordering, or reset order A–Z. Settings always remains accessible, even with all apps hidden.
@@ -25,7 +25,7 @@ A quiet, native Kotlin Android TV launcher: fullscreen bundled landscapes, a clo
 | Anywhere in launcher | Menu | Open Settings (also available as the final dock tile) |
 | Anywhere | Home | Android's configured home launcher |
 
-The dock stays visible until hidden or another app opens. Home behavior is controlled by the TV, not intercepted by this app.
+The dock automatically hides after **10 seconds without remote input**. Every remote key event restarts that timer. Home behavior is controlled by the TV, not intercepted by this app.
 
 ## Customize the dock and weather
 
@@ -41,15 +41,15 @@ Weather uses the [Open-Meteo API](https://open-meteo.com/en/docs) and [geocoding
 
 ## Public wallpaper sources
 
-Open **Settings → Wallpapers**, select **Wikimedia Commons**, **NASA**, or both, then enable **Use online wallpapers**. No account or API key is needed. On returning to the launcher, it displays any saved collection immediately and refreshes if due. **Refresh photos** in Settings uses the same hourly limit. New installs leave network wallpapers off until enabled; bundled landscapes always remain available.
+Open **Settings → Wallpapers**, select **Wikimedia Commons**, **NASA**, or both, then enable **Use online wallpapers**. No account or API key is needed. On returning to the launcher, it displays any saved collection immediately and refreshes if due. **Refresh photos** in Settings uses the same half-hour limit. New installs leave network wallpapers off until enabled; bundled landscapes always remain available.
 
-- **At most one refresh attempt per hour**, shared across manual refresh, automatic refresh, source changes and app restarts. The lease is saved before network work, so failures/cancellation do not create rapid retries. Longer provider `Retry-After` delays are respected. There is no background service, alarm, or wake-up job: automatic refresh happens only while the launcher is visible, or on the next foreground return when overdue.
-- **Four photos maximum**, each JPEG capped at **512 KiB** and at most **1920×1080**. The saved collection is at most **2 MiB plus small metadata**. Old and new collections coexist briefly for safe replacement, with a **5 MiB hard wallpaper-directory limit**. Old files and interrupted staging files are removed; no accumulating history.
-- A refresh makes at most **10 HTTP requests**: up to two listings and eight candidate image attempts. Each image response is capped at **3 MiB**, each listing at **1 MiB**, and a refresh has a **16 MiB response-body budget**. These are worst-case limits, not expected hourly usage. Oversized or unsuitable candidates are skipped. Known unchanged images are reused without downloading or recompressing them.
-- No new wallpaper download occurs every slide: the existing **55-second static / 5-second crossfade** cycle rotates through the saved collection between hourly updates.
-- Failed or empty refreshes keep the last complete collection for offline use. If no usable collection matches the selected sources, bundled landscapes appear. The app skips refresh writes if less than 8 MiB is available. **Clear photos and turn off downloads** releases wallpaper storage and disables automatic refresh.
+- **At most one refresh attempt per 30 minutes**, shared across manual refresh, automatic refresh, source changes and app restarts. The lease is saved before network work, so failures/cancellation do not create rapid retries. Longer provider `Retry-After` delays are respected. There is no background service, alarm, or wake-up job: automatic refresh happens only while the launcher is visible, or on the next foreground return when overdue.
+- **15 photos maximum**, each JPEG capped at **512 KiB** and at most **1920×1080**. The saved collection is at most **7.5 MiB plus metadata**. Old and new collections coexist briefly for safe replacement, with a **20 MiB hard wallpaper-directory limit**. Old files and interrupted staging files are removed; no accumulating photo files. A bounded history of the last 10,000 photo IDs prevents recent repeats without keeping those images.
+- A refresh makes at most **32 HTTP requests**: up to two listings and 30 candidate image attempts. Each image response is capped at **3 MiB**, each listing at **1 MiB**, and a refresh has a **48 MiB response-body budget**. These are worst-case limits, not expected half-hour usage. Oversized or unsuitable candidates are skipped. Recently downloaded photo IDs are skipped before downloading.
+- No new wallpaper download occurs every slide: each photo gets **115 seconds static / 5 seconds crossfade**, for two minutes total. Online collections play once, then hold the last photo until a fresh collection arrives; they do not loop. Playback position survives leaving the launcher and restarting the app.
+- Failed or empty refreshes keep the last complete collection for offline use. If no usable collection matches the selected sources, bundled landscapes appear. The app skips refresh writes if less than 23 MiB is available. **Clear photos and turn off downloads** releases wallpaper storage, clears the recent-photo history and disables automatic refresh.
 
-Commons supplies nature scenes from rotating landscape searches; NASA supplies space imagery from its Image and Video Library. Topic and candidate order vary hourly. One unavailable provider does not prevent the other from supplying images. Both are queried only when selected. Media are landscape JPG/PNG files, fetched from allowlisted HTTPS hosts with timeouts and no redirects; originals larger than the response cap are never downloaded. Image decoding has dimension limits and bounded output. Four decoded frames can use up to roughly 16 MiB of bitmap memory, separate from disk storage, with additional transient decoding memory during refresh.
+Commons supplies nature scenes from rotating landscape searches; NASA supplies space imagery from its Image and Video Library. Topics, result pages and candidate order vary every half hour. Providers may supply fewer than 15 usable new photos; the last photo then remains visible until the next permitted refresh. The 10,000-ID history is bounded, not a guarantee against visual duplicates published under different IDs or very old photos returning. One unavailable provider does not prevent the other from supplying images. Both are queried only when selected. Media are landscape JPG/PNG files, fetched from allowlisted HTTPS hosts with timeouts and no redirects; originals larger than the response cap are never downloaded. Image decoding has dimension limits and bounded output. Fifteen decoded frames can use up to roughly 60 MiB of bitmap memory, separate from disk storage, with old and new collections briefly coexisting (roughly 120 MiB) and additional transient decoding memory during refresh.
 
 **Preview downloaded photos** shows the title, author/source, license or usage guideline, and original source page. Commons accepts recognized CC BY, CC BY-SA, CC0 or public-domain metadata and retains attribution; the cache’s 16:9 crop is disclosed. NASA-specific credit is retained where supplied; NASA imagery is not universally copyright-free, so explicit copyright-marked entries are excluded and its usage guidelines remain linked. Sources and licenses apply to the photos independently of this code’s MIT license. See [Commons API](https://www.mediawiki.org/wiki/API:Imageinfo), [Commons reuse guidance](https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia), [NASA API](https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf), and [NASA media guidance](https://www.nasa.gov/nasa-brand-center/images-and-media/).
 
@@ -100,9 +100,9 @@ The script records Home resolution, installs only `com.traceur.androidsimpletv`,
 Manual checks:
 
 1. Confirm fullscreen wallpaper, readable clock/date, and hidden dock.
-2. Press OK once: the dock opens without launching an app. Navigate left/right to both ends; verify focus and scrolling. Press Back: only the dock hides.
+2. Press OK once: the dock opens without launching an app. Navigate left/right to both ends; verify focus and scrolling. Press Back: only the dock hides. Leave it open without input for 10 seconds and verify automatic hiding; input before the deadline should restart the timer.
 3. Reveal the dock and launch a TV app. Press Home: the stock launcher should appear. Open AndroidSimpleTV again from its app tile (or the explicit activity command below).
-4. Observe 55 seconds of stillness then a five-second crossfade. Leave midway through a fade, wait, and reopen: it should resume the frozen position.
+4. Observe 115 seconds of stillness then a five-second crossfade. Leave midway through a fade, wait, and reopen: it should resume the frozen position.
 5. Press Home and verify Google TV remains the default. Check sleep/wake with the physical remote. With Keep slideshow awake off, normal idle behavior should remain. With it on, leave the launcher visible beyond the configured idle interval, then verify that leaving the launcher releases the screen-on request.
 
 ```sh

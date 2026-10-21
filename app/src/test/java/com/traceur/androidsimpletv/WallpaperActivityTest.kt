@@ -28,12 +28,12 @@ class WallpaperActivityTest {
         repeat(300) { shadowOf(Looper.getMainLooper()).idle(); if (condition()) return; Thread.sleep(10) }
         fail("Background result was not delivered")
     }
-    private fun seed() {
+    private fun seed(count: Int = 1) {
         val context = RuntimeEnvironment.getApplication()
         val bitmap = Bitmap.createBitmap(1280, 720, Bitmap.Config.RGB_565)
         val bytes = ByteArrayOutputStream().also { bitmap.compress(Bitmap.CompressFormat.JPEG, 80, it) }.toByteArray()
         bitmap.recycle()
-        WallpaperStore(context).replace("COMMONS+NASA", listOf(WallpaperPhoto("test1", "Test", "artist", "https://thumb.wikimedia.org/test1.jpg", "https://commons.wikimedia.org/wiki/File:test1.jpg", "CC0", "https://creativecommons.org/publicdomain/zero/1.0/"))) { bytes }
+        WallpaperStore(context).replace("COMMONS+NASA", (1..count).map { WallpaperPhoto("test$it", "Test", "artist", "https://thumb.wikimedia.org/test$it.jpg", "https://commons.wikimedia.org/wiki/File:test$it.jpg", "CC0", "https://creativecommons.org/publicdomain/zero/1.0/") }) { bytes }
     }
     @Test fun `offline photos display with attribution and disabling restores bundled images`() {
         seed()
@@ -52,7 +52,23 @@ class WallpaperActivityTest {
         assertEquals("", credit.text.toString())
         controller.pause().stop().destroy()
     }
-    @Test fun `settings previews cached photos and respects hourly refresh gate`() {
+    @Test fun `fresh activity resumes saved photo rather than replaying the batch`() {
+        seed(3)
+        val prefs = LauncherPreferences(RuntimeEnvironment.getApplication())
+        prefs.publicWallpapersEnabled = true
+        prefs.wallpaperRetryAt = System.currentTimeMillis() + LauncherPreferences.WALLPAPER_INTERVAL_MS
+        val first = Robolectric.buildActivity(MainActivity::class.java).setup()
+        waitFor { first.get().window.decorView.findViewWithTag<TextView>("photo_credit").text.contains("artist") }
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(125))
+        first.pause()
+        assertEquals(1, first.get().timeline.imageIndex)
+        first.stop().destroy()
+        val restored = Robolectric.buildActivity(MainActivity::class.java).setup()
+        waitFor { restored.get().window.decorView.findViewWithTag<TextView>("photo_credit").text.contains("artist") }
+        assertEquals(1, restored.get().timeline.imageIndex)
+        restored.pause().stop().destroy()
+    }
+    @Test fun `settings previews cached photos and respects half-hour refresh gate`() {
         seed()
         val controller = Robolectric.buildActivity(WallpaperSettingsActivity::class.java).setup()
         fun button(text: String) = views(controller.get().window.decorView).filterIsInstance<Button>().first { it.text.toString() == text }
