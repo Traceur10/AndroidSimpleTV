@@ -7,6 +7,9 @@ import org.json.JSONObject
 /** Device-local settings. Component names survive label changes and duplicate app names. */
 internal class LauncherPreferences(context: Context) {
     private val prefs = context.getSharedPreferences("launcher", Context.MODE_PRIVATE)
+    var showPhotoInformation: Boolean
+        get() = prefs.getBoolean("showPhotoInformation", true)
+        set(value) { prefs.edit().putBoolean("showPhotoInformation", value).apply() }
     var publicWallpapersEnabled: Boolean
         get() = prefs.getBoolean("publicWallpapersEnabled", false)
         set(value) { prefs.edit().putBoolean("publicWallpapersEnabled", value).apply() }

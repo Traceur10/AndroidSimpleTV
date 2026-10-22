@@ -175,6 +175,7 @@ class MainActivity : Activity() {
     }
 
     private fun renderWallpaper() {
+        photoCredit.visibility = if (preferences.showPhotoInformation) View.VISIBLE else View.GONE
         if (renderedIndex != timeline.imageIndex) {
             renderedIndex = timeline.imageIndex
             saveWallpaperPosition()

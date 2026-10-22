@@ -61,6 +61,13 @@ class WallpaperSettingsActivity : Activity() {
         }
         column.addView(source, LinearLayout.LayoutParams(-1, -2))
         text(getString(R.string.public_intro))
+        column.addView(Switch(this).apply {
+            text = getString(R.string.show_photo_information)
+            textSize = 18f; setPadding(dp(8), dp(10), dp(8), dp(10))
+            isChecked = preferences.showPhotoInformation
+            setOnCheckedChangeListener { _, checked -> preferences.showPhotoInformation = checked }
+        }, LinearLayout.LayoutParams(-1, -2))
+        text(getString(R.string.show_photo_information_help), 14f)
         sourcesButton = button("") { chooseSources() }
         refreshButton = button(getString(R.string.public_refresh)) { refresh() }
         previewButton = button(getString(R.string.public_preview)) { loadPreview() }

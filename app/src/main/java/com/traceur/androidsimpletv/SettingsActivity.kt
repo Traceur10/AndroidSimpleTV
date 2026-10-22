@@ -6,6 +6,10 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
+import android.view.KeyEvent
+import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
+import android.view.inputmethod.EditorInfo
 import android.view.Gravity
 import android.widget.Button
 import android.widget.EditText
@@ -131,8 +135,11 @@ class SettingsActivity : Activity() {
             hint = getString(R.string.location_hint)
             inputType = InputType.TYPE_CLASS_TEXT
             setSingleLine()
+            imeOptions = EditorInfo.IME_ACTION_SEARCH
+            isFocusableInTouchMode = true
+            tag = "location_input"
         }
-        AlertDialog.Builder(this).setTitle(R.string.location_search).setView(input)
+        val dialog = AlertDialog.Builder(this).setTitle(R.string.location_search).setView(input)
             .setPositiveButton(R.string.search) { _, _ ->
                 val query = input.text.toString().trim()
                 if (query.length < 2) { status.setText(R.string.location_too_short); return@setPositiveButton }
@@ -156,6 +163,32 @@ class SettingsActivity : Activity() {
                         }, onFailure = { status.setText(R.string.weather_search_failed) })
                     }
                 }
-            }.setNegativeButton(R.string.cancel, null).show()
+            }.setNegativeButton(R.string.cancel, null).create()
+        fun showKeyboard() {
+            input.requestFocus()
+            input.post {
+                if (dialog.isShowing) (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
+                    .showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
+        input.setOnClickListener { showKeyboard() }
+        input.setOnKeyListener { _, key, event ->
+            if (key == KeyEvent.KEYCODE_DPAD_CENTER || key == KeyEvent.KEYCODE_ENTER || key == KeyEvent.KEYCODE_NUMPAD_ENTER) {
+                if (event.action == KeyEvent.ACTION_UP) showKeyboard()
+                true
+            } else false
+        }
+        input.setOnEditorActionListener { _, action, _ ->
+            if (action == EditorInfo.IME_ACTION_SEARCH) {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+                true
+            } else false
+        }
+        dialog.setOnShowListener {
+            dialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
+            dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+            showKeyboard()
+        }
+        dialog.show()
     }
 }

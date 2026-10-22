@@ -1,4 +1,11 @@
-# Validation — 2026-10-21
+# Validation — 2026-10-22
+
+## v0.7: TV keyboard and photo information switch
+
+- Local build, lint and all **35 tests passed**. Existing 11 lint warnings, no errors.
+- Added a regression test for location field focus, initial soft-keyboard request and remote OK reopening the keyboard. The wallpaper test checks hiding and restoring the credit overlay across activity resume without removing its text.
+- Installed on the second TV (Chromecast). Android input-method diagnostics confirmed the keyboard view visible both on opening the location dialog and after Back followed by OK. No location was saved during this check.
+- Added a persistent Show photo information switch in Wallpapers, default on. Hiding the overlay leaves credits/license/source information in photo previews. Stock Google TV Home resolution remained unchanged after installation.
 
 ## v0.6: two-minute photos and automatic dock hiding
 

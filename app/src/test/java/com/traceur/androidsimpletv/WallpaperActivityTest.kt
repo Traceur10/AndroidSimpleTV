@@ -44,6 +44,12 @@ class WallpaperActivityTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         val credit = controller.get().window.decorView.findViewWithTag<TextView>("photo_credit")
         waitFor { credit.text.contains("artist") }
+        assertEquals(View.VISIBLE, credit.visibility)
+        controller.pause(); prefs.showPhotoInformation = false; controller.resume()
+        assertEquals(View.GONE, credit.visibility)
+        assertTrue(credit.text.contains("artist"))
+        controller.pause(); prefs.showPhotoInformation = true; controller.resume()
+        assertEquals(View.VISIBLE, credit.visibility)
         controller.pause()
         val elapsed = controller.get().timeline.elapsedMs
         controller.resume()
