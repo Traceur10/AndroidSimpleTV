@@ -56,14 +56,15 @@ internal class ForecastView(context: Context) : View(context) {
             card.style = Paint.Style.FILL; canvas.drawRoundRect(r, 14f, 14f, card)
             card.color = Color.argb(130, 100, 120, 145)
             card.style = Paint.Style.STROKE; card.strokeWidth = 1f; canvas.drawRoundRect(r, 14f, 14f, card)
-            drawText(canvas, day.label(fahrenheit).substringBefore('\n'), r.centerX(), r.top + 24f, 14f, true)
-            drawText(canvas, day.shortDate(), r.centerX(), r.top + 42f, 11f, false, Color.rgb(165, 184, 214))
-            drawIcon(canvas, r.centerX(), r.top + 62f, day.code, 15f)
+            val cardHeight = r.height()
+            drawText(canvas, day.label(fahrenheit).substringBefore('\n'), r.centerX(), r.top + 23f, 14f, true)
+            drawText(canvas, day.shortDate(), r.centerX(), r.top + 40f, 11f, false, Color.rgb(165, 184, 214))
+            drawIcon(canvas, r.centerX(), r.top + cardHeight * .31f, day.code, 14f)
             // Keep the temperature pair compact like the reference card; the unit is
             // already visible in the current-weather header.
-            drawText(canvas, day.highText(fahrenheit), r.centerX() - 20f, r.top + 96f, 18f, true)
-            drawText(canvas, day.lowText(fahrenheit), r.centerX() + 27f, r.top + 96f, 12f, false, Color.rgb(155, 190, 230))
-            drawText(canvas, day.condition, r.centerX(), r.top + 116f, 10f, false, Color.rgb(185, 204, 228))
+            drawText(canvas, day.highText(fahrenheit), r.centerX() - 20f, r.top + cardHeight * .56f, 18f, true)
+            drawText(canvas, day.lowText(fahrenheit), r.centerX() + 27f, r.top + cardHeight * .56f, 12f, false, Color.rgb(155, 190, 230))
+            drawText(canvas, day.condition, r.centerX(), r.top + cardHeight * .72f, 10f, false, Color.rgb(185, 204, 228))
             drawText(canvas, "☂ ${day.precipitationProbability}%", r.centerX(), r.bottom - 12f, 11f, false, Color.rgb(145, 200, 245))
         }
     }

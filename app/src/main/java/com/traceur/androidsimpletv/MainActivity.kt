@@ -274,7 +274,7 @@ class MainActivity : Activity() {
         weatherGroup.addView(forecastView)
         // Use physical screen pixels here: TV density scaling would make a fixed dp width
         // far larger than the intended one-third-screen dashboard.
-        root.addView(weatherGroup, FrameLayout.LayoutParams(resources.displayMetrics.widthPixels / 3, dp(170), Gravity.TOP or Gravity.END).apply {
+        root.addView(weatherGroup, FrameLayout.LayoutParams(resources.displayMetrics.widthPixels / 3, dp(205), Gravity.TOP or Gravity.END).apply {
             setMargins(dp(48), dp(48), dp(48), 0)
         })
         photoCredit = label("", 12f).apply { maxLines = 2; tag = "photo_credit" }
