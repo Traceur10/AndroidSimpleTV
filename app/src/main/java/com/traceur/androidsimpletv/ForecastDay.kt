@@ -21,6 +21,7 @@ internal data class ForecastDay(val date: String, val high: Double, val low: Dou
         val unit = if (fahrenheit) "°F" else "°C"
         return "$day\n$condition\nHigh ${WeatherReading(high, 0).temperature(fahrenheit)}$unit\nLow ${WeatherReading(low, 0).temperature(fahrenheit)}$unit"
     }
+    fun shortDate(): String = SimpleDateFormat("d MMM", Locale.getDefault()).format(SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(date)!!)
     val condition: String get() = when (code) {
         0 -> "Clear"; 1, 2 -> "Partly cloudy"; 3 -> "Cloudy"; 45, 48 -> "Fog"
         51, 53, 55 -> "Drizzle"; 56, 57, 66, 67 -> "Freezing rain"
