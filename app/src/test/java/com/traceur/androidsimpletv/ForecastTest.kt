@@ -26,6 +26,7 @@ class ForecastTest {
     }
     @Test fun `cached forecast persists toggles on resume and clears with location`() {
         val prefs = LauncherPreferences(RuntimeEnvironment.getApplication())
+        prefs.showForecast = false
         assertFalse(prefs.showForecast)
         prefs.location = WeatherLocation("Test", 30.0, -97.0)
         val now = System.currentTimeMillis()
@@ -33,13 +34,13 @@ class ForecastTest {
         prefs.weather = WeatherReading(20.0, now, dates.map { ForecastDay(it, 22.0, 12.0, 0) })
         assertEquals(5, LauncherPreferences(RuntimeEnvironment.getApplication()).weather!!.forecast.size)
         val c = Robolectric.buildActivity(MainActivity::class.java).setup()
-        val view = c.get().window.decorView.findViewWithTag<TextView>("weather_forecast")
+        val view = c.get().window.decorView.findViewWithTag<View>("weather_forecast_container")
         assertEquals(View.GONE, view.visibility)
         c.pause(); prefs.showForecast = true; c.resume()
         assertEquals(View.VISIBLE, view.visibility)
-        assertTrue(view.text.contains("72°F"))
+        assertTrue(c.get().window.decorView.findViewWithTag<TextView>("weather_forecast").text.contains("72°F"))
         c.pause(); prefs.fahrenheit = false; c.resume()
-        assertTrue(view.text.contains("22°C"))
+        assertTrue(c.get().window.decorView.findViewWithTag<TextView>("weather_forecast").text.contains("22°C"))
         c.pause(); prefs.location = null; c.resume()
         assertNull(prefs.weather)
         assertEquals(View.GONE, view.visibility)

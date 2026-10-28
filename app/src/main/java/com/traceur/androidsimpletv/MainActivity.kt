@@ -39,7 +39,7 @@ class MainActivity : Activity() {
     private val wallpaperCheck = Runnable { loadWallpapers() }
     internal lateinit var timeline: SlideshowTimeline
     private lateinit var preferences: LauncherPreferences
-    private lateinit var forecastView: TextView
+    private lateinit var forecastView: LinearLayout
     private lateinit var weatherView: TextView
     private val weatherExecutor = Executors.newSingleThreadExecutor()
     private val weatherClient = WeatherClient()
@@ -270,10 +270,12 @@ class MainActivity : Activity() {
         weatherView = label("", 17f).apply { gravity = Gravity.END }
         val weatherGroup = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         weatherGroup.addView(weatherView)
-        forecastView = label("", 16f).apply {
-            tag = "weather_forecast"; gravity = Gravity.END
-            setPadding(dp(12), dp(12), dp(12), dp(12))
-            background = rounded(0xA6132333.toInt(), 12f)
+        forecastView = LinearLayout(this).apply {
+            tag = "weather_forecast_container"
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            background = rounded(0x66132333.toInt(), 14f)
             visibility = View.GONE
         }
         weatherGroup.addView(forecastView)
@@ -495,8 +497,25 @@ class MainActivity : Activity() {
         } else ""
         weatherView.text = getString(R.string.weather_display, location.name, temperature, stale)
         forecastView.visibility = if (preferences.showForecast) View.VISIBLE else View.GONE
-        val days = reading?.forecast.orEmpty().filter { it.date >= ForecastDay.today(reading?.timezone ?: "UTC") }
-        forecastView.text = if (days.isEmpty()) getString(if (failed || reading != null) R.string.forecast_unavailable else R.string.forecast_loading)
-            else getString(R.string.forecast_title) + "\n\n" + days.joinToString("\n\n") { it.label(preferences.fahrenheit) } + stale
+        // The API returns the forecast in local-date order; keep cached days visible even
+        // when the TV crosses midnight before the next refresh.
+        val days = reading?.forecast.orEmpty().take(5)
+        forecastView.removeAllViews()
+        if (days.isEmpty()) {
+            forecastView.addView(label(getString(if (failed || reading != null) R.string.forecast_unavailable else R.string.forecast_loading), 14f).apply { tag = "weather_forecast" })
+        } else {
+            days.forEach { day ->
+                val card = TextView(this).apply {
+                    if (day == days.first()) tag = "weather_forecast"
+                    text = day.label(preferences.fahrenheit).replace("\n", "\n")
+                    textSize = 13f
+                    gravity = Gravity.CENTER
+                    setTextColor(Color.WHITE)
+                    setPadding(dp(8), dp(5), dp(8), dp(5))
+                    maxLines = 3
+                }
+                forecastView.addView(card, LinearLayout.LayoutParams(0, -2, 1f))
+            }
+        }
     }
 }
