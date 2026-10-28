@@ -496,6 +496,6 @@ class MainActivity : Activity() {
         // The API returns the forecast in local-date order; keep cached days visible even
         // when the TV crosses midnight before the next refresh.
         val days = reading?.forecast.orEmpty().take(5)
-        forecastView.show(days, preferences.fahrenheit, if (days.isEmpty()) getString(if (failed || reading != null) R.string.forecast_unavailable else R.string.forecast_loading) else null, location.name, temperature)
+        forecastView.show(days, preferences.fahrenheit, if (days.isEmpty()) getString(if (failed || reading != null) R.string.forecast_unavailable else R.string.forecast_loading) else null, location.name, temperature, reading?.currentCode ?: -1)
     }
 }
