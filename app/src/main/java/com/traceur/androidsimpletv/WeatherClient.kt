@@ -27,7 +27,7 @@ internal class WeatherClient {
         val temperature = json.getJSONObject("current").getDouble("temperature_2m")
         require(temperature.isFinite() && temperature in -100.0..70.0)
         return WeatherReading(temperature, System.currentTimeMillis(),
-            if (includeForecast) runCatching { ForecastDay.parseDaily(json.getJSONObject("daily")) }.getOrDefault(emptyList()) else emptyList(), json.optString("timezone", "UTC"))
+            if (includeForecast) runCatching { ForecastDay.parseDaily(json.getJSONObject("daily")) }.getOrDefault(emptyList()) else emptyList(), json.optString("timezone", "UTC"), if (includeForecast) 2 else 0)
     }
 
     private fun get(url: String): JSONObject {

@@ -274,7 +274,7 @@ class MainActivity : Activity() {
         weatherGroup.addView(forecastView)
         // Use physical screen pixels here: TV density scaling would make a fixed dp width
         // far larger than the intended one-third-screen dashboard.
-        root.addView(weatherGroup, FrameLayout.LayoutParams(resources.displayMetrics.widthPixels / 3, dp(230), Gravity.TOP or Gravity.END).apply {
+        root.addView(weatherGroup, FrameLayout.LayoutParams(resources.displayMetrics.widthPixels / 3, dp(170), Gravity.TOP or Gravity.END).apply {
             setMargins(dp(48), dp(48), dp(48), 0)
         })
         photoCredit = label("", 12f).apply { maxLines = 2; tag = "photo_credit" }
@@ -464,7 +464,7 @@ class MainActivity : Activity() {
         if (location == null) { weatherView.setText(R.string.weather_setup); forecastView.visibility = View.GONE; return }
         val includeForecast = preferences.showForecast
         val cached = preferences.weather
-        if (cached != null && cached.isFresh(System.currentTimeMillis()) && (!includeForecast || cached.forecast.size == 5 && cached.forecast.first().date == ForecastDay.today(cached.timezone))) {
+        if (cached != null && cached.isFresh(System.currentTimeMillis()) && (!includeForecast || cached.forecastVersion >= 2)) {
             displayWeather(location, cached)
             handler.postDelayed(weatherTick, (cached.fetchedAt + 30 * 60_000L - System.currentTimeMillis()).coerceAtLeast(1_000L))
             return

@@ -52,9 +52,9 @@ internal class LauncherPreferences(context: Context) {
     var weather: WeatherReading?
         get() = runCatching {
             val json = JSONObject(prefs.getString("weather", null) ?: return null)
-            WeatherReading(json.getDouble("celsius"), json.getLong("fetched"), ForecastDay.fromArray(json.optJSONArray("forecast")), json.optString("timezone", "UTC"))
+            WeatherReading(json.getDouble("celsius"), json.getLong("fetched"), ForecastDay.fromArray(json.optJSONArray("forecast")), json.optString("timezone", "UTC"), json.optInt("forecastVersion", 0))
         }.getOrNull()
-        set(value) { prefs.edit().putString("weather", value?.let { JSONObject().put("celsius", it.celsius).put("fetched", it.fetchedAt).put("forecast", JSONArray(it.forecast.map { day -> day.json() })).put("timezone", it.timezone).toString() }).apply() }
+        set(value) { prefs.edit().putString("weather", value?.let { JSONObject().put("celsius", it.celsius).put("fetched", it.fetchedAt).put("forecast", JSONArray(it.forecast.map { day -> day.json() })).put("timezone", it.timezone).put("forecastVersion", it.forecastVersion).toString() }).apply() }
 
     fun isHidden(component: String) = prefs.getStringSet("hidden", emptySet())!!.contains(component)
     fun setHidden(component: String, hidden: Boolean) {
@@ -75,7 +75,7 @@ internal class LauncherPreferences(context: Context) {
 }
 
 internal data class WeatherLocation(val name: String, val latitude: Double, val longitude: Double)
-internal data class WeatherReading(val celsius: Double, val fetchedAt: Long, val forecast: List<ForecastDay> = emptyList(), val timezone: String = "UTC") {
+internal data class WeatherReading(val celsius: Double, val fetchedAt: Long, val forecast: List<ForecastDay> = emptyList(), val timezone: String = "UTC", val forecastVersion: Int = 0) {
     fun temperature(fahrenheit: Boolean): Int = kotlin.math.round(if (fahrenheit) celsius * 9 / 5 + 32 else celsius).toInt()
     fun isFresh(now: Long) = now >= fetchedAt && now - fetchedAt < 30 * 60_000L
 }
