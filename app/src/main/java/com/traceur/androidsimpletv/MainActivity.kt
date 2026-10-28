@@ -272,7 +272,7 @@ class MainActivity : Activity() {
         weatherGroup.addView(weatherView)
         forecastView = ForecastView(this)
         weatherGroup.addView(forecastView)
-        root.addView(weatherGroup, FrameLayout.LayoutParams(dp(720), -2, Gravity.TOP or Gravity.END).apply {
+        root.addView(weatherGroup, FrameLayout.LayoutParams(dp(640), dp(230), Gravity.TOP or Gravity.END).apply {
             setMargins(dp(48), dp(48), dp(48), 0)
         })
         photoCredit = label("", 12f).apply { maxLines = 2; tag = "photo_credit" }
@@ -489,10 +489,11 @@ class MainActivity : Activity() {
             "\n" + getString(R.string.weather_cached, DateFormat.getDateFormat(this).format(Date(reading.fetchedAt)) + " " + DateFormat.getTimeFormat(this).format(Date(reading.fetchedAt)))
         } else ""
         weatherView.text = getString(R.string.weather_display, location.name, temperature, stale)
+        weatherView.visibility = if (preferences.showForecast) View.GONE else View.VISIBLE
         forecastView.visibility = if (preferences.showForecast) View.VISIBLE else View.GONE
         // The API returns the forecast in local-date order; keep cached days visible even
         // when the TV crosses midnight before the next refresh.
         val days = reading?.forecast.orEmpty().take(5)
-        forecastView.show(days, preferences.fahrenheit, if (days.isEmpty()) getString(if (failed || reading != null) R.string.forecast_unavailable else R.string.forecast_loading) else null)
+        forecastView.show(days, preferences.fahrenheit, if (days.isEmpty()) getString(if (failed || reading != null) R.string.forecast_unavailable else R.string.forecast_loading) else null, location.name, temperature)
     }
 }

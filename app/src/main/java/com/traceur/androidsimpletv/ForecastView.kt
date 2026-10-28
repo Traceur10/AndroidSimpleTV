@@ -15,11 +15,13 @@ internal class ForecastView(context: Context) : View(context) {
     private var days = emptyList<ForecastDay>()
     private var fahrenheit = true
     private var message: String? = null
+    private var location = ""
+    private var current = ""
 
     init { tag = "weather_forecast_container"; setLayerType(View.LAYER_TYPE_SOFTWARE, null) }
 
-    fun show(days: List<ForecastDay>, fahrenheit: Boolean, message: String? = null) {
-        this.days = days.take(5); this.fahrenheit = fahrenheit; this.message = message; invalidate()
+    fun show(days: List<ForecastDay>, fahrenheit: Boolean, message: String? = null, location: String = "", current: String = "") {
+        this.days = days.take(5); this.fahrenheit = fahrenheit; this.message = message; this.location = location; this.current = current; invalidate()
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -28,7 +30,9 @@ internal class ForecastView(context: Context) : View(context) {
         panel.color = Color.argb(150, 12, 22, 36); canvas.drawRoundRect(RectF(0f, 0f, w, h), 18f, 18f, panel)
         if (message != null) { drawText(canvas, message!!, w / 2, h / 2, 14f, true); return }
         if (days.isEmpty()) return
-        val gap = 8f; val left = 10f; val top = 10f; val bottom = h - 10f
+        drawText(canvas, location, 18f, 25f, 14f, true, Color.WHITE, Paint.Align.LEFT)
+        drawText(canvas, current, w - 18f, 25f, 14f, true, Color.WHITE, Paint.Align.RIGHT)
+        val gap = 6f; val left = 10f; val top = 40f; val bottom = h - 10f
         val cardW = (w - left * 2 - gap * (days.size - 1)) / days.size
         days.forEachIndexed { i, day ->
             val x = left + i * (cardW + gap); val r = RectF(x, top, x + cardW, bottom)
@@ -40,11 +44,13 @@ internal class ForecastView(context: Context) : View(context) {
             drawText(canvas, day.condition, r.centerX(), r.top + 56f, 11f, false, Color.rgb(185, 204, 228))
             drawText(canvas, "High ${day.highText(fahrenheit)}", r.centerX(), r.top + 91f, 13f, true)
             drawText(canvas, "Low ${day.lowText(fahrenheit)}", r.centerX(), r.top + 115f, 12f, false, Color.rgb(155, 190, 230))
+            drawText(canvas, "☂ ${day.precipitationProbability}%", r.centerX(), r.bottom - 16f, 11f, false, Color.rgb(145, 200, 245))
         }
     }
 
-    private fun drawText(c: Canvas, value: String, x: Float, y: Float, size: Float, bold: Boolean, color: Int = Color.WHITE) {
+    private fun drawText(c: Canvas, value: String, x: Float, y: Float, size: Float, bold: Boolean, color: Int = Color.WHITE, align: Paint.Align = Paint.Align.CENTER) {
         text.color = color; text.textSize = size * resources.displayMetrics.density; text.textAlign = Paint.Align.CENTER
+        text.textAlign = align
         text.typeface = android.graphics.Typeface.create("sans-serif", if (bold) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
         c.drawText(value, x, y, text)
     }

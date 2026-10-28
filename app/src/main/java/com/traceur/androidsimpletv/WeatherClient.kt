@@ -22,7 +22,7 @@ internal class WeatherClient {
     }
 
     fun current(location: WeatherLocation, includeForecast: Boolean = false): WeatherReading {
-        val daily = if (includeForecast) "&daily=temperature_2m_max,temperature_2m_min,weather_code&forecast_days=5&timezone=auto" else ""
+        val daily = if (includeForecast) "&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max&forecast_days=5&timezone=auto" else ""
         val json = get("https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m&temperature_unit=celsius$daily")
         val temperature = json.getJSONObject("current").getDouble("temperature_2m")
         require(temperature.isFinite() && temperature in -100.0..70.0)
