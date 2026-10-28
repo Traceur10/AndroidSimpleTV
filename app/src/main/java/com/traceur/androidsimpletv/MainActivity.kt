@@ -39,7 +39,7 @@ class MainActivity : Activity() {
     private val wallpaperCheck = Runnable { loadWallpapers() }
     internal lateinit var timeline: SlideshowTimeline
     private lateinit var preferences: LauncherPreferences
-    private lateinit var forecastView: LinearLayout
+    private lateinit var forecastView: ForecastView
     private lateinit var weatherView: TextView
     private val weatherExecutor = Executors.newSingleThreadExecutor()
     private val weatherClient = WeatherClient()
@@ -270,14 +270,7 @@ class MainActivity : Activity() {
         weatherView = label("", 17f).apply { gravity = Gravity.END }
         val weatherGroup = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         weatherGroup.addView(weatherView)
-        forecastView = LinearLayout(this).apply {
-            tag = "weather_forecast_container"
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.END
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-            background = rounded(0x66132333.toInt(), 14f)
-            visibility = View.GONE
-        }
+        forecastView = ForecastView(this)
         weatherGroup.addView(forecastView)
         root.addView(weatherGroup, FrameLayout.LayoutParams(dp(720), -2, Gravity.TOP or Gravity.END).apply {
             setMargins(dp(48), dp(48), dp(48), 0)
@@ -500,23 +493,6 @@ class MainActivity : Activity() {
         // The API returns the forecast in local-date order; keep cached days visible even
         // when the TV crosses midnight before the next refresh.
         val days = reading?.forecast.orEmpty().take(5)
-        forecastView.removeAllViews()
-        if (days.isEmpty()) {
-            forecastView.addView(label(getString(if (failed || reading != null) R.string.forecast_unavailable else R.string.forecast_loading), 14f).apply { tag = "weather_forecast" })
-        } else {
-            days.forEach { day ->
-                val card = TextView(this).apply {
-                    if (day == days.first()) tag = "weather_forecast"
-                    text = day.label(preferences.fahrenheit).replace("\n", "\n")
-                    textSize = 12f
-                    gravity = Gravity.CENTER
-                    setTextColor(Color.WHITE)
-                    setPadding(dp(8), dp(5), dp(8), dp(5))
-                    maxLines = 4
-                    minWidth = dp(120)
-                }
-                forecastView.addView(card, LinearLayout.LayoutParams(0, -2, 1f))
-            }
-        }
+        forecastView.show(days, preferences.fahrenheit, if (days.isEmpty()) getString(if (failed || reading != null) R.string.forecast_unavailable else R.string.forecast_loading) else null)
     }
 }
