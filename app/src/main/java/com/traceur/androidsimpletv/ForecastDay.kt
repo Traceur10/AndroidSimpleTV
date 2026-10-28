@@ -19,7 +19,7 @@ internal data class ForecastDay(val date: String, val high: Double, val low: Dou
         val parser = SimpleDateFormat("yyyy-MM-dd", Locale.US)
         val day = SimpleDateFormat("EEE", Locale.getDefault()).format(parser.parse(date)!!)
         val unit = if (fahrenheit) "°F" else "°C"
-        return "$day · $condition\nHigh ${WeatherReading(high, 0).temperature(fahrenheit)}$unit   Low ${WeatherReading(low, 0).temperature(fahrenheit)}$unit"
+        return "$day\n$condition\nHigh ${WeatherReading(high, 0).temperature(fahrenheit)}$unit\nLow ${WeatherReading(low, 0).temperature(fahrenheit)}$unit"
     }
     val condition: String get() = when (code) {
         0 -> "Clear"; 1, 2 -> "Partly cloudy"; 3 -> "Cloudy"; 45, 48 -> "Fog"

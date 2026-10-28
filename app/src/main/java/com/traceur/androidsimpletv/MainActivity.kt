@@ -279,7 +279,7 @@ class MainActivity : Activity() {
             visibility = View.GONE
         }
         weatherGroup.addView(forecastView)
-        root.addView(weatherGroup, FrameLayout.LayoutParams(dp(330), -2, Gravity.TOP or Gravity.END).apply {
+        root.addView(weatherGroup, FrameLayout.LayoutParams(dp(720), -2, Gravity.TOP or Gravity.END).apply {
             setMargins(dp(48), dp(48), dp(48), 0)
         })
         photoCredit = label("", 12f).apply { maxLines = 2; tag = "photo_credit" }
@@ -508,11 +508,12 @@ class MainActivity : Activity() {
                 val card = TextView(this).apply {
                     if (day == days.first()) tag = "weather_forecast"
                     text = day.label(preferences.fahrenheit).replace("\n", "\n")
-                    textSize = 13f
+                    textSize = 12f
                     gravity = Gravity.CENTER
                     setTextColor(Color.WHITE)
                     setPadding(dp(8), dp(5), dp(8), dp(5))
-                    maxLines = 3
+                    maxLines = 4
+                    minWidth = dp(120)
                 }
                 forecastView.addView(card, LinearLayout.LayoutParams(0, -2, 1f))
             }
