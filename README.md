@@ -39,6 +39,8 @@ Select **Weather location** to open the on-screen keyboard (OK on the text field
 
 Weather uses the [Open-Meteo API](https://open-meteo.com/en/docs) and [geocoding API](https://open-meteo.com/en/docs/geocoding-api), with Open-Meteo/GeoNames attribution in Settings. The public endpoint is intended for non-commercial use; review [provider terms](https://open-meteo.com/en/terms) before commercial distribution. Weather data is CC BY 4.0. Internet failures leave wallpapers and app launching functional. Foreground polling stops on pause; requests are cancelled and late results ignored.
 
+Enable **Show five-day forecast** in Settings to display today and the following four days beneath current weather, with conditions and daily highs/lows in your selected units. It is off by default, uses the saved location, shares the foreground 30-minute weather request/cache, and removes past dates from cached forecasts. Disable it to restore the simpler wallpaper view.
+
 ## Public wallpaper sources
 
 Open **Settings → Wallpapers**, select **Wikimedia Commons**, **NASA**, or both, then enable **Use online wallpapers**. No account or API key is needed. On returning to the launcher, it displays any saved collection immediately and refreshes if due. **Refresh photos** in Settings uses the same half-hour limit. New installs leave network wallpapers off until enabled; bundled landscapes always remain available.

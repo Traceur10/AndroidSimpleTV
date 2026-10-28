@@ -77,6 +77,12 @@ class SettingsActivity : Activity() {
             setPadding(16, 0, 16, 16)
         })
         locationButton = button("") { searchLocation() }
+        column.addView(Switch(this).apply {
+            text = getString(R.string.show_forecast)
+            textSize = 18f; setPadding(16, 20, 16, 20)
+            isChecked = preferences.showForecast
+            setOnCheckedChangeListener { _, checked -> preferences.showForecast = checked }
+        }, LinearLayout.LayoutParams(-1, -2))
         unitsButton = button("") {
             preferences.fahrenheit = !preferences.fahrenheit
             updateLabels()

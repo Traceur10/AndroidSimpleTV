@@ -39,6 +39,7 @@ class MainActivity : Activity() {
     private val wallpaperCheck = Runnable { loadWallpapers() }
     internal lateinit var timeline: SlideshowTimeline
     private lateinit var preferences: LauncherPreferences
+    private lateinit var forecastView: TextView
     private lateinit var weatherView: TextView
     private val weatherExecutor = Executors.newSingleThreadExecutor()
     private val weatherClient = WeatherClient()
@@ -267,7 +268,16 @@ class MainActivity : Activity() {
             setMargins(dp(48), dp(34), dp(48), 0)
         })
         weatherView = label("", 17f).apply { gravity = Gravity.END }
-        root.addView(weatherView, FrameLayout.LayoutParams(dp(330), -2, Gravity.TOP or Gravity.END).apply {
+        val weatherGroup = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        weatherGroup.addView(weatherView)
+        forecastView = label("", 16f).apply {
+            tag = "weather_forecast"; gravity = Gravity.END
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            background = rounded(0xA6132333.toInt(), 12f)
+            visibility = View.GONE
+        }
+        weatherGroup.addView(forecastView)
+        root.addView(weatherGroup, FrameLayout.LayoutParams(dp(330), -2, Gravity.TOP or Gravity.END).apply {
             setMargins(dp(48), dp(48), dp(48), 0)
         })
         photoCredit = label("", 12f).apply { maxLines = 2; tag = "photo_credit" }
@@ -454,9 +464,10 @@ class MainActivity : Activity() {
         if (!resumed) return
         handler.removeCallbacks(weatherTick)
         val location = preferences.location
-        if (location == null) { weatherView.setText(R.string.weather_setup); return }
+        if (location == null) { weatherView.setText(R.string.weather_setup); forecastView.visibility = View.GONE; return }
+        val includeForecast = preferences.showForecast
         val cached = preferences.weather
-        if (cached != null && cached.isFresh(System.currentTimeMillis())) {
+        if (cached != null && cached.isFresh(System.currentTimeMillis()) && (!includeForecast || cached.forecast.size == 5 && cached.forecast.first().date == ForecastDay.today(cached.timezone))) {
             displayWeather(location, cached)
             handler.postDelayed(weatherTick, (cached.fetchedAt + 30 * 60_000L - System.currentTimeMillis()).coerceAtLeast(1_000L))
             return
@@ -464,7 +475,7 @@ class MainActivity : Activity() {
         displayWeather(location, cached)
         val token = ++weatherGeneration
         weatherJob = weatherExecutor.submit {
-            val result = runCatching { weatherClient.current(location) }
+            val result = runCatching { weatherClient.current(location, includeForecast) }
             handler.post {
                 if (!resumed || token != weatherGeneration) return@post
                 result.fold(onSuccess = {
@@ -483,5 +494,9 @@ class MainActivity : Activity() {
             "\n" + getString(R.string.weather_cached, DateFormat.getDateFormat(this).format(Date(reading.fetchedAt)) + " " + DateFormat.getTimeFormat(this).format(Date(reading.fetchedAt)))
         } else ""
         weatherView.text = getString(R.string.weather_display, location.name, temperature, stale)
+        forecastView.visibility = if (preferences.showForecast) View.VISIBLE else View.GONE
+        val days = reading?.forecast.orEmpty().filter { it.date >= ForecastDay.today(reading?.timezone ?: "UTC") }
+        forecastView.text = if (days.isEmpty()) getString(if (failed || reading != null) R.string.forecast_unavailable else R.string.forecast_loading)
+            else getString(R.string.forecast_title) + "\n\n" + days.joinToString("\n\n") { it.label(preferences.fahrenheit) } + stale
     }
 }

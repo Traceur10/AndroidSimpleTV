@@ -66,4 +66,8 @@
     <string name="public_privacy">Wikimedia Commons supplies nature scenes; NASA supplies space images. No account or API key is needed. Requests go only to the selected providers. Downloads stop when you leave the launcher or this screen. Photos are resized to at most 1080p and old collections are replaced. Credits and license details are available in previews. The last 10,000 photo IDs are remembered to avoid repeats; clearing photos also clears this history.</string>
     <string name="show_photo_information">Show photo information</string>
     <string name="show_photo_information_help">Show credits on the wallpaper. Full credits and source details always remain available in Preview downloaded photos.</string>
+    <string name="show_forecast">Show five-day forecast</string>
+    <string name="forecast_title">Five-day forecast</string>
+    <string name="forecast_loading">Loading forecast…</string>
+    <string name="forecast_unavailable">Forecast unavailable</string>
 </resources>

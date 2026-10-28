@@ -1,4 +1,10 @@
-# Validation — 2026-10-22
+# Validation — 2026-10-27
+
+## v0.8: optional five-day weather forecast
+
+- Local build, lint and all **37 tests passed**. Tests cover daily parsing, invalid dates/temperatures, Fahrenheit/Celsius conversion, location-timezone date boundaries, persistent cache, visibility on resume and cache removal when location changes.
+- Optional setting defaults off. Forecast uses the saved location and units; current weather and forecast share one Open-Meteo request and the foreground 30-minute cache. Old cache entries remain readable. Past forecast dates are omitted; stale readings retain a cached timestamp, and missing data has an unavailable state.
+- Installed on Sony BRAVIA and Chromecast with their existing default Home unchanged. Enabled the forecast on the Sony and visually verified five live daily entries with conditions/highs/lows. No reboot, full overnight rollover or network-disconnection hardware test was performed.
 
 ## v0.7: TV keyboard and photo information switch
 

@@ -34,6 +34,9 @@ internal class LauncherPreferences(context: Context) {
     var keepSlideshowAwake: Boolean
         get() = prefs.getBoolean("keepSlideshowAwake", false)
         set(value) { prefs.edit().putBoolean("keepSlideshowAwake", value).apply() }
+    var showForecast: Boolean
+        get() = prefs.getBoolean("showForecast", false)
+        set(value) { prefs.edit().putBoolean("showForecast", value).apply() }
     var fahrenheit: Boolean
         get() = prefs.getBoolean("fahrenheit", true)
         set(value) { prefs.edit().putBoolean("fahrenheit", value).apply() }
@@ -49,9 +52,9 @@ internal class LauncherPreferences(context: Context) {
     var weather: WeatherReading?
         get() = runCatching {
             val json = JSONObject(prefs.getString("weather", null) ?: return null)
-            WeatherReading(json.getDouble("celsius"), json.getLong("fetched"))
+            WeatherReading(json.getDouble("celsius"), json.getLong("fetched"), ForecastDay.fromArray(json.optJSONArray("forecast")), json.optString("timezone", "UTC"))
         }.getOrNull()
-        set(value) { prefs.edit().putString("weather", value?.let { JSONObject().put("celsius", it.celsius).put("fetched", it.fetchedAt).toString() }).apply() }
+        set(value) { prefs.edit().putString("weather", value?.let { JSONObject().put("celsius", it.celsius).put("fetched", it.fetchedAt).put("forecast", JSONArray(it.forecast.map { day -> day.json() })).put("timezone", it.timezone).toString() }).apply() }
 
     fun isHidden(component: String) = prefs.getStringSet("hidden", emptySet())!!.contains(component)
     fun setHidden(component: String, hidden: Boolean) {
@@ -72,7 +75,7 @@ internal class LauncherPreferences(context: Context) {
 }
 
 internal data class WeatherLocation(val name: String, val latitude: Double, val longitude: Double)
-internal data class WeatherReading(val celsius: Double, val fetchedAt: Long) {
+internal data class WeatherReading(val celsius: Double, val fetchedAt: Long, val forecast: List<ForecastDay> = emptyList(), val timezone: String = "UTC") {
     fun temperature(fahrenheit: Boolean): Int = kotlin.math.round(if (fahrenheit) celsius * 9 / 5 + 32 else celsius).toInt()
     fun isFresh(now: Long) = now >= fetchedAt && now - fetchedAt < 30 * 60_000L
 }
