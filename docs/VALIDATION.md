@@ -16,10 +16,10 @@
 ## v0.6: two-minute photos and automatic dock hiding
 
 - Local `testDebugUnitTest lintDebug assembleDebug`: **BUILD SUCCESSFUL; 34 tests passed; 0 lint errors, 11 warnings**.
-- Tests cover 115-second static / five-second fade timing, non-looping online collections holding their final frame, playback restored in a fresh activity, the 30-minute refresh lease, 15-photo limits, 512 KiB files, a 20 MiB directory ceiling including staging, recent-ID exclusion and bounded 10,000-ID history. Dock tests cover ten-second inactivity, input resetting the deadline and pause cancelling the callback.
+- Tests cover 115-second static / five-second fade timing, non-looping online collections holding their final frame, playback restored in a fresh activity, the 30-minute refresh lease, 15-photo limits, 1.5 MiB files, a 20 MiB directory ceiling including staging, recent-ID exclusion and bounded 10,000-ID history. Dock tests cover ten-second inactivity, input resetting the deadline and pause cancelling the callback.
 - Updated the Sony BRAVIA API 31 with `install -r`. On-device UI inspection confirmed the dock appears and hides after inactivity. Stock Google TV Home resolution remained unchanged. Existing weather, dock and keep-awake preferences were retained.
 - The TV still had its previous four-photo collection and a persisted refresh cooldown until 8:45 AM. Manual refresh correctly respected that gate. **A live 15-photo download and full 30-minute device soak were not performed for this revision**; do not interpret the automated cache tests as a live provider capacity or long-run memory test.
-- Saved JPEG payload is capped at 7.5 MiB; the wallpaper directory, including replacement files and metadata, is capped at 20 MiB. Each refresh allows at most 32 HTTP requests / 48 MiB response bodies. No background downloads. Provider shortages or failures hold the last image rather than replaying the collection. The recent-ID history is bounded and cannot detect identical imagery published under different IDs.
+- Saved JPEGs are capped at 1.5 MiB each; the wallpaper directory, including replacement files and metadata, is capped at 20 MiB. Each refresh allows at most 32 HTTP requests / 48 MiB response bodies. No background downloads. Provider shortages or failures hold the last image rather than replaying the collection. The recent-ID history is bounded and cannot detect identical imagery published under different IDs.
 
 ## v0.5: hourly Commons/NASA wallpapers and storage limits
 
