@@ -79,14 +79,14 @@ internal class WallpaperStore(context: Context) {
                     val bitmap = decode(download(photo)) ?: continue
                     try {
                         var encoded: ByteArray? = null
-                        for (quality in listOf(80, 65, 50, 35)) {
+                        for (quality in listOf(90, 85, 80, 72)) {
                             val buffer = java.io.ByteArrayOutputStream()
                             bitmap.compress(Bitmap.CompressFormat.JPEG, quality, buffer)
                             if (buffer.size() <= MAX_FILE_BYTES) { encoded = buffer.toByteArray(); break }
                         }
                         if (encoded != null) {
                             val used = root.walkTopDown().filter { it.isFile }.sumOf { it.length() }
-                            if (used + encoded.size + 512 * 1024 > MAX_DISK_BYTES) throw IOException("Wallpaper cache is full")
+                            if (used + encoded.size + MAX_FILE_BYTES > MAX_DISK_BYTES) throw IOException("Wallpaper cache is full")
                             File(staging, "${photo.id}.jpg").writeBytes(encoded)
                             accepted.add(photo)
                         }
@@ -127,7 +127,9 @@ internal class WallpaperStore(context: Context) {
         private val lock = Any()
         const val HISTORY_LIMIT = 10_000
         const val MAX_PHOTOS = 15
-        const val MAX_FILE_BYTES = 512L * 1024
+        // Preserve gradients and fine detail on 4K panels while keeping the
+        // complete 15-photo album below the existing bounded cache limit.
+        const val MAX_FILE_BYTES = 1_500L * 1024
         const val MAX_DISK_BYTES = 20L * 1024 * 1024
         internal fun decode(bytes: ByteArray): Bitmap? {
             if (bytes.size > PublicWallpaperClient.IMAGE_LIMIT) return null
@@ -138,7 +140,7 @@ internal class WallpaperStore(context: Context) {
             var sample = 1
             while (w / sample > 3840 || h / sample > 2160) sample *= 2
             val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply {
-                inSampleSize = sample; inPreferredConfig = Bitmap.Config.RGB_565
+                inSampleSize = sample; inPreferredConfig = Bitmap.Config.ARGB_8888
             }) ?: return null
             // Normalize to the TV frame before caching, including very wide panoramas.
             val cropWidth = minOf(decoded.width, decoded.height * 16 / 9)
