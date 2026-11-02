@@ -309,7 +309,7 @@ class MainActivity : Activity() {
             clipToOutline = true
             outlineProvider = object : ViewOutlineProvider() {
                 override fun getOutline(view: View, outline: android.graphics.Outline) {
-                    outline.setRoundRect(0, 0, view.width, view.height, dp(18).toFloat())
+                    outline.setRoundRect(0, 0, view.width, view.height, dp(12).toFloat())
                 }
             }
             if (android.os.Build.VERSION.SDK_INT >= 31) {
