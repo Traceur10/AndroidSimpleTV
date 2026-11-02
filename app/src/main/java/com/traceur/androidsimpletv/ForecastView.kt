@@ -22,7 +22,7 @@ internal class ForecastView(context: Context) : View(context) {
     private var current = ""
     private var currentCode = -1
     private var night = false
-    private val panelRadius: Float get() = 18f * resources.displayMetrics.density
+    private val panelRadius: Float get() = 12f * resources.displayMetrics.density
     private val weatherIcons: Map<Int, Bitmap> by lazy {
         mapOf(
             R.drawable.weather_clear to BitmapFactory.decodeResource(resources, R.drawable.weather_clear),
