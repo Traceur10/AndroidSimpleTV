@@ -173,8 +173,17 @@ class SettingsActivity : Activity() {
         fun showKeyboard() {
             input.requestFocus()
             input.post {
-                if (dialog.isShowing) (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
-                    .showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)
+                if (!dialog.isShowing) return@post
+                val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                // Chromecast remote-input surfaces can ignore SHOW_IMPLICIT when
+                // the dialog has just taken focus. Force the IME after the window
+                // is attached, then retry once after focus settles.
+                imm.showSoftInput(input, InputMethodManager.SHOW_FORCED)
+                input.postDelayed({
+                    if (dialog.isShowing && !imm.isActive(input)) {
+                        imm.showSoftInput(input, InputMethodManager.SHOW_FORCED)
+                    }
+                }, 180L)
             }
         }
         input.setOnClickListener { showKeyboard() }
